@@ -116,6 +116,13 @@ class HydroDailyE2ETest(unittest.TestCase):
 
     def test_05_double_submit_prevention(self):
         """【二重送信防止】保存ボタン押下直後にDisabled化 & スピナー表示"""
+        # Mock network response
+        self.page.route('**/dummy-gas-endpoint', lambda route: route.fulfill(
+            status=200,
+            content_type='application/json',
+            body='{"status": "success"}'
+        ))
+
         self.page.goto(self.url)
         self.page.locator('[data-testid="tab-bato"]').click()
         self.page.locator('[data-testid="input-current-ec"]').fill("1.8")
@@ -127,6 +134,25 @@ class HydroDailyE2ETest(unittest.TestCase):
         self.assertTrue(save_btn.is_disabled())
         spinner = self.page.locator('[data-testid="save-spinner"]')
         self.assertTrue(spinner.is_visible())
+
+        # Wait for request to complete
+        self.page.wait_for_timeout(500)  # Allow time for fetch to complete
+        self.assertFalse(save_btn.is_disabled())
+        self.assertFalse(spinner.is_visible())
+
+    def test_07_network_error_handling(self):
+        """【ネットワークエラー】接続失敗時に適切なエラートースト表示"""
+        # Mock network failure
+        self.page.route('**/dummy-gas-endpoint', lambda route: route.abort())
+
+        self.page.goto(self.url)
+        self.page.locator('[data-testid="tab-bato"]').click()
+        self.page.locator('[data-testid="input-current-ec"]').fill("1.8")
+        self.page.locator('[data-testid="btn-save"]').click()
+
+        # Verify error toast appears
+        toast = self.page.locator('#toast:has-text("接続に失敗しました")')
+        self.assertTrue(toast.is_visible())
 
     def test_06_pesticide_calculator(self):
         """【農薬計算】水量と希釈倍率から必要薬量を算出"""
