@@ -194,14 +194,22 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">農薬プリセット</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">農薬プリセット（写真解析マスター）</label>
           <select id="select-pesticide-preset" class="w-full text-sm font-semibold text-slate-700 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-200 focus:outline-none"
             onchange="onPesticideSelect(this.value)">
-            <option value="100">粘着くん液剤 (100倍 - アブラムシ・ハダニ・うどんこ病)</option>
-            <option value="1000">コロマイト乳剤 (1000倍 - ハダニ類)</option>
-            <option value="2000">プレバソンフロアブル (2000倍 - オオタバコガ)</option>
+            <option value="nenchakukun">粘着くん液剤 (100倍 - アブラムシ・ハダニ・うどんこ病 [物理防除])</option>
+            <option value="sanyol">サンヨール DBEDC乳剤 (500倍 - うどんこ病・灰色かび・コナジラミ)</option>
+            <option value="wide_hitter">GFワイドヒッター 顆粒水和剤 (1000倍 - 殺菌: うどんこ・べと病・疫病 [g])</option>
+            <option value="zentari">STゼンターリ 顆粒水和剤 (1000倍 - BT殺虫: アオムシ・オオタバコガ [g])</option>
+            <option value="malathon">マラソン乳剤 (1000倍 - 殺虫: アブラムシ・ハダニ・スリップス)</option>
+            <option value="koromite">コロマイト乳剤 (1000倍 - 殺ダニ: ハダニ類・サビダニ)</option>
+            <option value="prevathon">プレバソンフロアブル5 (2000倍 - 殺虫: オオタバコガ・コナガ)</option>
+            <option value="dyne">展着剤 ダイン (5000倍 - 散布水1Lあたり0.2mL/数滴)</option>
             <option value="custom">手動入力（自由指定）</option>
           </select>
+        </div>
+        <div id="pesticide-details-badge" class="text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded-lg font-medium leading-relaxed">
+          対象: アブラムシ類、ハダニ類、コナジラミ類、うどんこ病 (デンプン系物理防除)
         </div>
 
         <div>
@@ -414,8 +422,32 @@
       recalcFertilizer();
     }
 
-    // Pesticide Calculator
-    function calculatePesticide() {
+    // Pesticide Configuration & Calculations
+    const PESTICIDES_CONFIG = {
+      nenchakukun: { name: '粘着くん液剤', dilution: 100, unit: 'mL', desc: '対象: アブラムシ類、ハダニ類、コナジラミ類、うどんこ病 (デンプン系物理防除)' },
+      sanyol: { name: 'サンヨール DBEDC乳剤', dilution: 500, unit: 'mL', desc: '対象: うどんこ病、灰色かび病、コナジラミ類、アブラムシ類、ハダニ類 (殺菌殺虫)' },
+      wide_hitter: { name: 'GFワイドヒッター 顆粒水和剤', dilution: 1000, unit: 'g', desc: '対象: うどんこ病、べと病、葉かび病、疫病、すすかび病 (予防治療殺菌)' },
+      zentari: { name: 'STゼンターリ 顆粒水和剤', dilution: 1000, unit: 'g', desc: '対象: アオムシ、コナガ、ヨトウムシ、オオタバコガ、ウリノメイガ (BT生物殺虫剤)' },
+      malathon: { name: 'マラソン乳剤', dilution: 1000, unit: 'mL', desc: '対象: アブラムシ類、ハダニ類、アザミウマ類(スリップス)、ハモグリバエ (有機リン系殺虫)' },
+      koromite: { name: 'コロマイト乳剤', dilution: 1000, unit: 'mL', desc: '対象: ハダニ類、サビダニ類 (殺ダニ剤・速効性)' },
+      prevathon: { name: 'プレバソンフロアブル5', dilution: 2000, unit: 'mL', desc: '対象: オオタバコガ、コナガ、アオムシ、ヨトウムシ、ハモグリバエ (浸透移行殺虫)' },
+      dyne: { name: '展着剤 ダイン', dilution: 5000, unit: 'mL', desc: '備考: 散布水1Lあたり0.1〜0.3mL (2〜3滴添加。付着・浸透を向上)' }
+    };
+
+    function onPesticideSelect(key) {
+      const badge = document.getElementById('pesticide-details-badge');
+      if (key !== 'custom' && PESTICIDES_CONFIG[key]) {
+        const item = PESTICIDES_CONFIG[key];
+        document.getElementById('input-dilution').value = item.dilution;
+        badge.textContent = item.desc;
+        badge.classList.remove('hidden');
+        calculatePesticide(item.unit);
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function calculatePesticide(unit = 'mL / g') {
       const waterMl = parseFloat(document.getElementById('input-water-ml').value) || 0;
       const dilution = parseFloat(document.getElementById('input-dilution').value) || 1;
       const displayMl = document.getElementById('display-pesticide-ml');
@@ -427,14 +459,7 @@
       }
       const needed = waterMl / dilution;
       displayMl.textContent = needed.toFixed(1);
-      desc.textContent = `${waterMl} mL ÷ ${dilution}倍 = ${needed.toFixed(1)} mL`;
-    }
-
-    function onPesticideSelect(val) {
-      if (val !== 'custom') {
-        document.getElementById('input-dilution').value = val;
-        calculatePesticide();
-      }
+      desc.textContent = `${waterMl} mL ÷ ${dilution}倍 = ${needed.toFixed(1)} ${unit}`;
     }
 
     // Photo Handling

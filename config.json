@@ -1,12 +1,18 @@
 {
   "project_name": "HydroDaily",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "fertilizer": {
     "name": "OAT House 100x Concentrate",
     "rate_ml_per_l_per_ec": 4.0,
     "solutions": [
-      "A液 (1号+5号)",
-      "B液 (2号)"
+      {
+        "name": "A液 (1号+5号)",
+        "formula": "1号 600g + 5号 20g / 4L"
+      },
+      {
+        "name": "B液 (2号)",
+        "formula": "2号 400g / 4L"
+      }
     ]
   },
   "systems": [
@@ -47,18 +53,75 @@
   ],
   "pesticides_initial_list": [
     {
+      "id": "wide_hitter",
+      "name": "GFワイドヒッター 顆粒水和剤",
+      "category": "殺菌剤",
+      "target_crops": "トマト・ナス・きゅうり・アブラナ科・ネギ",
+      "target_diseases": ["うどんこ病", "べと病", "葉かび病", "疫病", "すすかび病"],
+      "default_dilution": 1000,
+      "unit": "g"
+    },
+    {
+      "id": "zentari",
+      "name": "STゼンターリ 顆粒水和剤",
+      "category": "生物殺虫剤 (BT剤)",
+      "target_crops": "野菜類全般",
+      "target_pests": ["アオムシ", "コナガ", "ヨトウムシ", "オオタバコガ", "ウリノメイガ"],
+      "default_dilution": 1000,
+      "unit": "g"
+    },
+    {
+      "id": "malathon",
+      "name": "マラソン乳剤",
+      "category": "殺虫剤 (有機リン系)",
+      "target_crops": "トマト・ナス・きゅうり・豆類・アブラナ科等",
+      "target_pests": ["アブラムシ類", "ハダニ類", "アザミウマ類", "ハモグリバエ"],
+      "default_dilution": 1000,
+      "unit": "mL"
+    },
+    {
+      "id": "sanyol",
+      "name": "サンヨール DBEDC乳剤",
+      "category": "殺菌・殺虫剤 (有機銅・界面活性剤)",
+      "target_crops": "野菜類全般",
+      "target_diseases_and_pests": ["うどんこ病", "灰色かび病", "コナジラミ類", "アブラムシ類", "ハダニ類"],
+      "default_dilution": 500,
+      "unit": "mL"
+    },
+    {
+      "id": "nenchakukun",
       "name": "粘着くん液剤",
-      "active_ingredient": "ヒドロキシプロピル化リン酸架橋デンプン液剤 (5.0%)",
+      "category": "物理防除 (デンプン系)",
       "target_crops": "野菜類",
-      "target_pests": [
-        "アブラムシ類",
-        "ハダニ類",
-        "コナジラミ類",
-        "うどんこ病"
-      ],
+      "target_pests": ["アブラムシ類", "ハダニ類", "コナジラミ類", "うどんこ病"],
       "default_dilution": 100,
-      "timing": "収穫前日まで",
-      "limit_times": "なし（物理防除）",
+      "unit": "mL"
+    },
+    {
+      "id": "koromite",
+      "name": "コロマイト乳剤",
+      "category": "殺ダニ剤",
+      "target_crops": "ナス・トマト・きゅうり・イチゴ等",
+      "target_pests": ["ハダニ類", "サビダニ類"],
+      "default_dilution": 1000,
+      "unit": "mL"
+    },
+    {
+      "id": "prevathon",
+      "name": "プレバソンフロアブル5",
+      "category": "殺虫剤 (ジアミド系)",
+      "target_crops": "アブラナ科・ナス科・ネギ等",
+      "target_pests": ["オオタバコガ", "コナガ", "アオムシ", "ヨトウムシ", "ハモグリバエ"],
+      "default_dilution": 2000,
+      "unit": "mL"
+    },
+    {
+      "id": "dyne",
+      "name": "展着剤 ダイン",
+      "category": "展着剤",
+      "target_crops": "散布液全般",
+      "default_dilution": 5000,
+      "note": "水1Lあたり 0.1〜0.3mL (数滴添加)",
       "unit": "mL"
     }
   ],
