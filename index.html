@@ -37,10 +37,15 @@
           <p id="today-date-display" class="text-xs text-emerald-100 font-medium"></p>
         </div>
       </div>
-      <!-- Mode Tabs -->
-      <div class="flex bg-emerald-800/60 p-0.5 rounded-lg text-xs font-semibold">
-        <button id="mode-tab-fert" data-testid="mode-fertilizer" onclick="switchMode('fert')" class="px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition">💧 液肥</button>
-        <button id="mode-tab-pest" data-testid="mode-pesticide" onclick="switchMode('pest')" class="px-3 py-1.5 rounded-md text-emerald-100 hover:text-white transition">🧪 農薬</button>
+      <!-- Actions: Mode Tabs + Settings -->
+      <div class="flex items-center space-x-1.5">
+        <div class="flex bg-emerald-800/60 p-0.5 rounded-lg text-xs font-semibold">
+          <button id="mode-tab-fert" data-testid="mode-fertilizer" onclick="switchMode('fert')" class="px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition">💧 液肥</button>
+          <button id="mode-tab-pest" data-testid="mode-pesticide" onclick="switchMode('pest')" class="px-3 py-1.5 rounded-md text-emerald-100 hover:text-white transition">🧪 農薬</button>
+        </div>
+        <button onclick="openSettingsModal()" data-testid="btn-settings" class="p-1.5 bg-emerald-800/60 hover:bg-emerald-800 active:bg-emerald-900 rounded-lg text-sm text-emerald-100 hover:text-white transition" title="Google連携設定">
+          ⚙️
+        </button>
       </div>
     </div>
 
@@ -257,9 +262,55 @@
     メッセージ
   </div>
 
+  <!-- Settings Modal -->
+  <div id="modal-settings" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b pb-2">
+        <h3 class="text-sm font-bold text-slate-800 flex items-center space-x-1.5">
+          <span>⚙️</span>
+          <span>Google連携設定</span>
+        </h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-600 mb-1">Google Apps Script Web App URL</label>
+        <input type="url" id="input-gas-url" placeholder="https://script.google.com/macros/s/.../exec"
+          class="w-full text-xs text-slate-800 bg-slate-50 border rounded-xl p-2.5 focus:border-emerald-500 focus:outline-none">
+        <p class="text-[10px] text-slate-400 mt-1">※スプレッドシート連携用GASのデプロイURLを貼り付けてください。</p>
+      </div>
+      <div class="flex space-x-2 pt-2">
+        <button onclick="closeSettingsModal()" class="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">キャンセル</button>
+        <button onclick="saveGasSettings()" class="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700">設定を保存</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Client Logic -->
   <script>
-    const GAS_ENDPOINT = '/dummy-gas-endpoint';
+    function getGasEndpoint() {
+      const saved = localStorage.getItem('hydro_gas_endpoint');
+      if (saved) return saved;
+      if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+        return '/dummy-gas-endpoint';
+      }
+      return '';
+    }
+
+    function openSettingsModal() {
+      document.getElementById('input-gas-url').value = localStorage.getItem('hydro_gas_endpoint') || '';
+      document.getElementById('modal-settings').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('modal-settings').classList.add('hidden');
+    }
+
+    function saveGasSettings() {
+      const url = document.getElementById('input-gas-url').value.trim();
+      localStorage.setItem('hydro_gas_endpoint', url);
+      closeSettingsModal();
+      showToast('✅ Google連携URLを保存しました！');
+    }
 
     // Configuration
     const SYSTEM_CONFIG = {
@@ -510,6 +561,13 @@
 
     // Double Submission Guard & Save Action
     function saveRecord() {
+      const endpoint = getGasEndpoint();
+      if (!endpoint) {
+        showToast('⚠️ Google連携URLが未設定です。右上の⚙️から設定してください');
+        openSettingsModal();
+        return;
+      }
+
       const btn = document.getElementById('btn-save');
       const btnText = document.getElementById('btn-save-text');
       const spinner = document.getElementById('save-spinner');
@@ -522,30 +580,27 @@
       // 送信データの準備
       const sys = SYSTEM_CONFIG[currentSystem];
       const payload = {
-        system: sys.name,
-        ec: document.getElementById('input-current-ec').value,
-        ph: document.getElementById('input-ph').value,
-        temp: document.getElementById('input-temp').value,
+        action: 'save_log',
+        date: new Date().toLocaleDateString('sv-SE'),
+        system_id: currentSystem,
+        current_ec: parseFloat(document.getElementById('input-current-ec').value) || 0,
+        target_ec: sys.targetEc,
+        added_ml: parseFloat(document.getElementById('display-added-ml').textContent) || 0,
+        ph: parseFloat(document.getElementById('input-ph').value) || null,
+        water_temp: parseFloat(document.getElementById('input-temp').value) || null,
         memo: document.getElementById('input-memo').value,
-        photos: attachedPhotos.length,
-        timestamp: new Date().toISOString()
+        photos: attachedPhotos.map(p => ({ name: p.name, base64: p.data }))
       };
 
-      // GAS Web AppへのPOSTリクエスト
-      fetch(GAS_ENDPOINT, {
+      // GAS Web AppへのPOSTリクエスト (CORSプリフライト回避のため text/plain 送信)
+      fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'text/plain;charset=utf-8',
         },
         body: JSON.stringify(payload)
       })
       .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(() => {
         showToast('✅ 栽培ログをスプレッドシートに保存しました！');
         localStorage.removeItem(`hydro_draft_${currentSystem}`);
         attachedPhotos = [];
