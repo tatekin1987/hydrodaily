@@ -485,19 +485,48 @@
       spinner.classList.remove('hidden');
       btnText.textContent = 'Googleドライブへ保存中...';
 
-      // Simulation / Post to GAS
-      setTimeout(() => {
+      // 送信データの準備
+      const sys = SYSTEM_CONFIG[currentSystem];
+      const payload = {
+        system: sys.name,
+        ec: document.getElementById('input-current-ec').value,
+        ph: document.getElementById('input-ph').value,
+        temp: document.getElementById('input-temp').value,
+        memo: document.getElementById('input-memo').value,
+        photos: attachedPhotos.length,
+        timestamp: new Date().toISOString()
+      };
+
+      // GAS Web AppへのPOSTリクエスト
+      fetch(GAS_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(() => {
         showToast('✅ 栽培ログをスプレッドシートに保存しました！');
-        btnText.textContent = '記録をGoogleシートに保存';
-        spinner.classList.add('hidden');
-        btn.disabled = false;
-        
-        // Clear draft
         localStorage.removeItem(`hydro_draft_${currentSystem}`);
         attachedPhotos = [];
         renderPhotoPreviews();
         loadDraft();
-      }, 1200);
+      })
+      .catch(error => {
+        console.error('Save failed:', error);
+        showToast('⚠️ 接続に失敗しました。電波の良い場所で再度お試しください');
+      })
+      .finally(() => {
+        btnText.textContent = '記録をGoogleシートに保存';
+        spinner.classList.add('hidden');
+        btn.disabled = false;
+      });
     }
 
     function showToast(msg) {
