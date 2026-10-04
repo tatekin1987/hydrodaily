@@ -243,12 +243,14 @@
   </div>
 
   <!-- Toast Notification -->
-  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg pointer-events-none transition-opacity duration-300 opacity-0 z-50">
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg pointer-events-none z-50 hidden">
     メッセージ
   </div>
 
   <!-- Client Logic -->
   <script>
+    const GAS_ENDPOINT = '/dummy-gas-endpoint';
+
     // Configuration
     const SYSTEM_CONFIG = {
       bato: { name: 'BatoBucket', tank: 94, targetEc: 2.2, crops: 'スティックセニョール・秋ナス' },
@@ -532,8 +534,8 @@
     function showToast(msg) {
       const t = document.getElementById('toast');
       t.textContent = msg;
-      t.classList.remove('opacity-0');
-      setTimeout(() => t.classList.add('opacity-0'), 2500);
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 2500);
     }
   </script>
 </body>

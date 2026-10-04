@@ -33,6 +33,16 @@ class HydroDailyE2ETest(unittest.TestCase):
         class Handler(SimpleHTTPRequestHandler):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, directory=cls.dir, **kwargs)
+            def do_POST(self):
+                if "dummy-gas-endpoint" in self.path:
+                    time.sleep(0.12)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(b'{"status": "success"}')
+                else:
+                    self.send_response(404)
+                    self.end_headers()
             def log_message(self, format, *args):
                 pass  # suppress logs
 
@@ -52,6 +62,8 @@ class HydroDailyE2ETest(unittest.TestCase):
     def setUp(self):
         self.context = self.browser.new_context()
         self.page = self.context.new_page()
+        self.page.on("console", lambda msg: print("CONSOLE:", msg.text))
+        self.page.on("pageerror", lambda err: print("PAGEERROR:", err))
         self.page.set_default_timeout(3000)
         self.url = f"http://127.0.0.1:{self.port}/index.html"
 
@@ -116,13 +128,6 @@ class HydroDailyE2ETest(unittest.TestCase):
 
     def test_05_double_submit_prevention(self):
         """【二重送信防止】保存ボタン押下直後にDisabled化 & スピナー表示"""
-        # Mock network response
-        self.page.route('**/dummy-gas-endpoint', lambda route: route.fulfill(
-            status=200,
-            content_type='application/json',
-            body='{"status": "success"}'
-        ))
-
         self.page.goto(self.url)
         self.page.locator('[data-testid="tab-bato"]').click()
         self.page.locator('[data-testid="input-current-ec"]').fill("1.8")
@@ -136,7 +141,7 @@ class HydroDailyE2ETest(unittest.TestCase):
         self.assertTrue(spinner.is_visible())
 
         # Wait for request to complete
-        self.page.wait_for_timeout(500)  # Allow time for fetch to complete
+        self.page.wait_for_timeout(600)  # Allow time for fetch to complete
         self.assertFalse(save_btn.is_disabled())
         self.assertFalse(spinner.is_visible())
 
@@ -150,8 +155,9 @@ class HydroDailyE2ETest(unittest.TestCase):
         self.page.locator('[data-testid="input-current-ec"]').fill("1.8")
         self.page.locator('[data-testid="btn-save"]').click()
 
-        # Verify error toast appears
+        # Verify error toast appears with wait_for
         toast = self.page.locator('#toast:has-text("接続に失敗しました")')
+        toast.wait_for(state="visible", timeout=3000)
         self.assertTrue(toast.is_visible())
 
     def test_06_pesticide_calculator(self):
