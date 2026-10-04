@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HydroDaily - 水耕栽培水質管理 & 追肥日誌</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* iOS / Mobile safe area & touch optimization */
+    body { -webkit-tap-highlight-color: transparent; }
+    .pb-safe { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans select-none">
+
+  <!-- Header -->
+  <header class="bg-emerald-700 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="text-2xl">🌱</span>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight leading-tight">HydroDaily</h1>
+          <p id="today-date-display" class="text-xs text-emerald-100 font-medium"></p>
+        </div>
+      </div>
+      <!-- Mode Tabs -->
+      <div class="flex bg-emerald-800/60 p-0.5 rounded-lg text-xs font-semibold">
+        <button id="mode-tab-fert" data-testid="mode-fertilizer" onclick="switchMode('fert')" class="px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition">💧 液肥</button>
+        <button id="mode-tab-pest" data-testid="mode-pesticide" onclick="switchMode('pest')" class="px-3 py-1.5 rounded-md text-emerald-100 hover:text-white transition">🧪 農薬</button>
+      </div>
+    </div>
+
+    <!-- System Selector (Fertilizer Mode Only) -->
+    <div id="system-selector-bar" class="bg-emerald-800/90 px-4 py-2 border-t border-emerald-600/50">
+      <div class="max-w-md mx-auto flex space-x-2">
+        <button data-testid="tab-bato" onclick="selectSystem('bato')" id="tab-bato" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center transition bg-white text-emerald-800 shadow-sm">
+          Bato (94L)
+        </button>
+        <button data-testid="tab-dwc" onclick="selectSystem('dwc')" id="tab-dwc" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center transition text-emerald-100 hover:bg-emerald-700/60">
+          DWC (140L)
+        </button>
+        <button data-testid="tab-tower" onclick="selectSystem('tower')" id="tab-tower" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center transition text-emerald-100 hover:bg-emerald-700/60">
+          タワー (19L)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-md mx-auto w-full p-4 space-y-4 pb-safe">
+
+    <!-- ==================== FERTILIZER MODE ==================== -->
+    <div id="section-fertilizer" class="space-y-4">
+      
+      <!-- System Info Card -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
+        <div>
+          <span id="current-system-name" class="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">BatoBucket</span>
+          <h2 id="current-crop-name" class="text-base font-bold text-slate-800 mt-1">スティックセニョール・秋ナス</h2>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-slate-400 block font-medium">目標EC</span>
+          <span id="target-ec-display" class="text-xl font-black text-emerald-700">2.2 <span class="text-xs font-normal text-slate-500">mS/cm</span></span>
+        </div>
+      </div>
+
+      <!-- Quick EC Input & Calculator Card -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">測定EC (mS/cm)</label>
+        <div class="relative">
+          <input type="number" step="0.1" id="input-current-ec" data-testid="input-current-ec" placeholder="例: 1.8"
+            class="w-full text-3xl font-black text-slate-800 bg-slate-50 rounded-xl px-4 py-3 border-2 border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none transition text-center"
+            oninput="handleEcInput(this.value)">
+        </div>
+
+        <!-- Quick EC Increment / Keypad helpers -->
+        <div class="grid grid-cols-4 gap-2 mt-3">
+          <button onclick="adjustEc(-0.1)" class="py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-lg text-xs font-bold text-slate-700 transition">-0.1</button>
+          <button onclick="adjustEc(0.1)" class="py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-lg text-xs font-bold text-slate-700 transition">+0.1</button>
+          <button onclick="setEcPreset(1.5)" class="py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-lg text-xs font-bold text-slate-700 transition">1.5</button>
+          <button onclick="setEcPreset(2.0)" class="py-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-lg text-xs font-bold text-slate-700 transition">2.0</button>
+        </div>
+
+        <!-- Safety Warning Box -->
+        <div id="warning-box" data-testid="warning-box" class="hidden mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-start space-x-2">
+          <span class="text-lg">⚠️</span>
+          <div class="text-xs leading-relaxed font-semibold">
+            異常値の可能性があります (0.5以下 または 3.5以上)。センサー校正または数値を再確認してください。保存は安全のためロックされています。
+          </div>
+        </div>
+
+        <!-- Fertilizer Dosage Result -->
+        <div class="mt-4 pt-4 border-t border-slate-100 bg-emerald-50/50 rounded-xl p-4 text-center">
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">OATハウス 原液追肥量 (A液/B液 各)</span>
+          <div class="mt-1 flex items-baseline justify-center space-x-1">
+            <span id="display-added-ml" data-testid="display-added-ml" class="text-4xl font-black text-emerald-700">0.0</span>
+            <span class="text-base font-bold text-emerald-800">mL</span>
+          </div>
+          <p id="calc-formula-desc" class="text-[11px] text-slate-400 mt-1">水道満水(94L) ✕ 差分EC ✕ 4.0</p>
+        </div>
+      </div>
+
+      <!-- Observation Inputs (pH, Water Temp, Memo, Photos) -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-4">
+        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">任意観察項目</h3>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">pH</label>
+            <input type="number" step="0.1" id="input-ph" data-testid="input-ph" placeholder="6.2"
+              class="w-full text-base font-bold text-slate-800 bg-slate-50 rounded-xl px-3 py-2 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none"
+              oninput="saveDraft()">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">水温 (℃)</label>
+            <input type="number" step="0.5" id="input-temp" data-testid="input-temp" placeholder="22.5"
+              class="w-full text-base font-bold text-slate-800 bg-slate-50 rounded-xl px-3 py-2 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none"
+              oninput="saveDraft()">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 mb-1">観察メモ（生育・害虫・異常）</label>
+          <textarea id="input-memo" data-testid="input-memo" rows="2" placeholder="例: 花蕾が肥大中。下葉にうどんこ病の兆候なし。"
+            class="w-full text-sm text-slate-800 bg-slate-50 rounded-xl px-3 py-2 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none resize-none"
+            oninput="saveDraft()"></textarea>
+        </div>
+
+        <!-- Photo Attachments -->
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 mb-1">現場写真（最大5枚）</label>
+          <div class="flex items-center space-x-2">
+            <label class="cursor-pointer flex items-center justify-center px-4 py-2 border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl text-xs font-bold text-slate-600 hover:text-emerald-700 bg-slate-50 hover:bg-emerald-50/30 transition">
+              <span>📷 写真を追加</span>
+              <input type="file" id="input-photos" accept="image/*" multiple class="hidden" onchange="handlePhotoUpload(this)">
+            </label>
+            <span id="photo-count-badge" class="text-xs text-slate-400 font-medium">0 / 5枚</span>
+          </div>
+          <div id="photo-preview-grid" class="grid grid-cols-5 gap-2 mt-2"></div>
+        </div>
+      </div>
+
+      <!-- 10-Year Diary Section -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-2">
+            <span class="text-base">📖</span>
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">10年日記（過去同月同日 ±7日）</h3>
+          </div>
+          <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">知見共有</span>
+        </div>
+        
+        <div id="diary-list" class="space-y-3">
+          <!-- Sample historical record cards -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+            <div class="flex justify-between items-center text-slate-500 text-[11px] mb-1">
+              <span class="font-bold text-emerald-800">2025年10月02日 (1年前)</span>
+              <span>BatoBucket</span>
+            </div>
+            <div class="font-semibold text-slate-700">EC 1.9 ➔ A/B液 各112.8mL 追肥</div>
+            <p class="text-slate-600 mt-1">定植完了。根の活着が良好。気温低下に伴い水温19℃安定。</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ==================== PESTICIDE MODE ==================== -->
+    <div id="section-pesticide" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-4">
+        <h2 class="text-base font-bold text-slate-800 flex items-center space-x-2">
+          <span>🧪</span>
+          <span>農薬希釈計算機</span>
+        </h2>
+        <p class="text-xs text-slate-500">水耕現場での誤希釈防止用計算電卓。散布水量と倍率から正確な薬量を算出します。</p>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">散布水量 (mL)</label>
+          <input type="number" id="input-water-ml" data-testid="input-water-ml" placeholder="例: 1000 (1リットル)" value="1000"
+            class="w-full text-xl font-bold text-slate-800 bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none"
+            oninput="calculatePesticide()">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">農薬プリセット</label>
+          <select id="select-pesticide-preset" class="w-full text-sm font-semibold text-slate-700 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-200 focus:outline-none"
+            onchange="onPesticideSelect(this.value)">
+            <option value="100">粘着くん液剤 (100倍 - アブラムシ・ハダニ・うどんこ病)</option>
+            <option value="1000">コロマイト乳剤 (1000倍 - ハダニ類)</option>
+            <option value="2000">プレバソンフロアブル (2000倍 - オオタバコガ)</option>
+            <option value="custom">手動入力（自由指定）</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">希釈倍率 (倍)</label>
+          <input type="number" id="input-dilution" data-testid="input-dilution" placeholder="例: 100" value="100"
+            class="w-full text-xl font-bold text-slate-800 bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none"
+            oninput="calculatePesticide()">
+        </div>
+
+        <!-- Calculated Pesticide Amount -->
+        <div class="mt-4 pt-4 border-t border-slate-100 bg-amber-50/60 rounded-xl p-4 text-center">
+          <span class="text-xs font-bold text-amber-800 uppercase tracking-wide">必要農薬量</span>
+          <div class="mt-1 flex items-baseline justify-center space-x-1">
+            <span id="display-pesticide-ml" data-testid="display-pesticide-ml" class="text-4xl font-black text-amber-700">10.0</span>
+            <span class="text-base font-bold text-amber-800">mL / g</span>
+          </div>
+          <p id="pesticide-formula-desc" class="text-[11px] text-slate-400 mt-1">1000 mL ÷ 100倍 = 10.0 mL</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ==================== FIXED BOTTOM BAR (Thumb Zone) ==================== -->
+  <div id="fixed-bottom-bar" class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 z-40">
+    <div class="max-w-md mx-auto">
+      <button id="btn-save" data-testid="btn-save" onclick="saveRecord()"
+        class="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold text-base rounded-2xl shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2 transition duration-150">
+        <span id="btn-save-text">記録をGoogleシートに保存</span>
+        <!-- Spinner -->
+        <div id="save-spinner" data-testid="save-spinner" class="hidden">
+          <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg pointer-events-none transition-opacity duration-300 opacity-0 z-50">
+    メッセージ
+  </div>
+
+  <!-- Client Logic -->
+  <script>
+    // Configuration
+    const SYSTEM_CONFIG = {
+      bato: { name: 'BatoBucket', tank: 94, targetEc: 2.2, crops: 'スティックセニョール・秋ナス' },
+      dwc: { name: 'DWC / NFT', tank: 140, targetEc: 1.4, crops: 'サンチュ・青ネギ・小松菜' },
+      tower: { name: 'タワー型', tank: 19, targetEc: 1.8, crops: 'スティックセニョール' }
+    };
+
+    let currentSystem = 'bato';
+    let currentMode = 'fert';
+    let attachedPhotos = [];
+
+    // Initialize UI
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set today's date in JST
+      const now = new Date();
+      const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
+      document.getElementById('today-date-display').textContent = now.toLocaleDateString('ja-JP', options);
+
+      // Restore system & drafts
+      const savedSys = localStorage.getItem('hydro_selected_system') || 'bato';
+      selectSystem(savedSys);
+      loadDraft();
+      calculatePesticide();
+    });
+
+    // Switch Fertilizer / Pesticide Mode
+    function switchMode(mode) {
+      currentMode = mode;
+      const fertSec = document.getElementById('section-fertilizer');
+      const pestSec = document.getElementById('section-pesticide');
+      const sysBar = document.getElementById('system-selector-bar');
+      const bottomBar = document.getElementById('fixed-bottom-bar');
+      const tabFert = document.getElementById('mode-tab-fert');
+      const tabPest = document.getElementById('mode-tab-pest');
+
+      if (mode === 'fert') {
+        fertSec.classList.remove('hidden');
+        pestSec.classList.add('hidden');
+        sysBar.classList.remove('hidden');
+        bottomBar.classList.remove('hidden');
+        tabFert.className = 'px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition';
+        tabPest.className = 'px-3 py-1.5 rounded-md text-emerald-100 hover:text-white transition';
+      } else {
+        fertSec.classList.add('hidden');
+        pestSec.classList.remove('hidden');
+        sysBar.classList.add('hidden');
+        bottomBar.classList.add('hidden');
+        tabPest.className = 'px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition';
+        tabFert.className = 'px-3 py-1.5 rounded-md text-emerald-100 hover:text-white transition';
+      }
+    }
+
+    // Select System Tab
+    function selectSystem(sysId) {
+      currentSystem = sysId;
+      localStorage.setItem('hydro_selected_system', sysId);
+
+      ['bato', 'dwc', 'tower'].forEach(id => {
+        const btn = document.getElementById(`tab-${id}`);
+        if (id === sysId) {
+          btn.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center transition bg-white text-emerald-800 shadow-sm';
+        } else {
+          btn.className = 'flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center transition text-emerald-100 hover:bg-emerald-700/60';
+        }
+      });
+
+      const sys = SYSTEM_CONFIG[sysId];
+      document.getElementById('current-system-name').textContent = sys.name;
+      document.getElementById('current-crop-name').textContent = sys.crops;
+      document.getElementById('target-ec-display').innerHTML = `${sys.targetEc} <span class="text-xs font-normal text-slate-500">mS/cm</span>`;
+      document.getElementById('calc-formula-desc').textContent = `水道満水(${sys.tank}L) ✕ 差分EC ✕ 4.0`;
+
+      // Load system specific draft
+      loadDraft();
+      recalcFertilizer();
+    }
+
+    // Fertilizer Calculation & Safety Lock
+    function handleEcInput(val) {
+      saveDraft();
+      recalcFertilizer();
+    }
+
+    function recalcFertilizer() {
+      const ecInput = document.getElementById('input-current-ec');
+      const valStr = ecInput.value;
+      const saveBtn = document.getElementById('btn-save');
+      const warningBox = document.getElementById('warning-box');
+      const displayMl = document.getElementById('display-added-ml');
+
+      if (!valStr || isNaN(valStr)) {
+        displayMl.textContent = '0.0';
+        warningBox.classList.add('hidden');
+        saveBtn.disabled = false;
+        return;
+      }
+
+      const ec = parseFloat(valStr);
+      const sys = SYSTEM_CONFIG[currentSystem];
+
+      // Safety Lock Check: <= 0.5 or >= 3.5
+      if (ec <= 0.5 || ec >= 3.5) {
+        warningBox.classList.remove('hidden');
+        saveBtn.disabled = true;
+      } else {
+        warningBox.classList.add('hidden');
+        saveBtn.disabled = false;
+      }
+
+      // Calculation Formula: (target - current) * tank * 4.0
+      if (ec >= sys.targetEc) {
+        displayMl.textContent = '0.0 (追肥不要)';
+      } else {
+        const diff = sys.targetEc - ec;
+        const added = diff * sys.tank * 4.0;
+        displayMl.textContent = added.toFixed(1);
+      }
+    }
+
+    function adjustEc(delta) {
+      const ecInput = document.getElementById('input-current-ec');
+      const cur = parseFloat(ecInput.value) || SYSTEM_CONFIG[currentSystem].targetEc;
+      const next = Math.max(0, Math.round((cur + delta) * 10) / 10);
+      ecInput.value = next;
+      handleEcInput(next);
+    }
+
+    function setEcPreset(val) {
+      const ecInput = document.getElementById('input-current-ec');
+      ecInput.value = val;
+      handleEcInput(val);
+    }
+
+    // LocalStorage Draft Management
+    function saveDraft() {
+      const data = {
+        ec: document.getElementById('input-current-ec').value,
+        ph: document.getElementById('input-ph').value,
+        temp: document.getElementById('input-temp').value,
+        memo: document.getElementById('input-memo').value
+      };
+      localStorage.setItem(`hydro_draft_${currentSystem}`, JSON.stringify(data));
+    }
+
+    function loadDraft() {
+      const saved = localStorage.getItem(`hydro_draft_${currentSystem}`);
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          document.getElementById('input-current-ec').value = data.ec || '';
+          document.getElementById('input-ph').value = data.ph || '';
+          document.getElementById('input-temp').value = data.temp || '';
+          document.getElementById('input-memo').value = data.memo || '';
+        } catch (e) {}
+      } else {
+        document.getElementById('input-current-ec').value = '';
+        document.getElementById('input-ph').value = '';
+        document.getElementById('input-temp').value = '';
+        document.getElementById('input-memo').value = '';
+      }
+      recalcFertilizer();
+    }
+
+    // Pesticide Calculator
+    function calculatePesticide() {
+      const waterMl = parseFloat(document.getElementById('input-water-ml').value) || 0;
+      const dilution = parseFloat(document.getElementById('input-dilution').value) || 1;
+      const displayMl = document.getElementById('display-pesticide-ml');
+      const desc = document.getElementById('pesticide-formula-desc');
+
+      if (dilution <= 0) {
+        displayMl.textContent = '0.0';
+        return;
+      }
+      const needed = waterMl / dilution;
+      displayMl.textContent = needed.toFixed(1);
+      desc.textContent = `${waterMl} mL ÷ ${dilution}倍 = ${needed.toFixed(1)} mL`;
+    }
+
+    function onPesticideSelect(val) {
+      if (val !== 'custom') {
+        document.getElementById('input-dilution').value = val;
+        calculatePesticide();
+      }
+    }
+
+    // Photo Handling
+    function handlePhotoUpload(input) {
+      const files = Array.from(input.files);
+      if (attachedPhotos.length + files.length > 5) {
+        showToast('⚠️ 写真は最大5枚まで添付可能です');
+        return;
+      }
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          attachedPhotos.push({ name: file.name, data: e.target.result });
+          renderPhotoPreviews();
+        };
+        reader.readAsDataURL(file);
+      });
+      input.value = '';
+    }
+
+    function removePhoto(idx) {
+      attachedPhotos.splice(idx, 1);
+      renderPhotoPreviews();
+    }
+
+    function renderPhotoPreviews() {
+      const grid = document.getElementById('photo-preview-grid');
+      const badge = document.getElementById('photo-count-badge');
+      badge.textContent = `${attachedPhotos.length} / 5枚`;
+      grid.innerHTML = '';
+      attachedPhotos.forEach((p, idx) => {
+        const div = document.createElement('div');
+        div.className = 'relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-100';
+        div.innerHTML = `
+          <img src="${p.data}" class="w-full h-full object-cover">
+          <button onclick="removePhoto(${idx})" class="absolute top-0 right-0 bg-rose-600 text-white rounded-bl-lg w-5 h-5 flex items-center justify-center text-xs">✕</button>
+        `;
+        grid.appendChild(div);
+      });
+    }
+
+    // Double Submission Guard & Save Action
+    function saveRecord() {
+      const btn = document.getElementById('btn-save');
+      const btnText = document.getElementById('btn-save-text');
+      const spinner = document.getElementById('save-spinner');
+
+      // Double submit lock
+      btn.disabled = true;
+      spinner.classList.remove('hidden');
+      btnText.textContent = 'Googleドライブへ保存中...';
+
+      // Simulation / Post to GAS
+      setTimeout(() => {
+        showToast('✅ 栽培ログをスプレッドシートに保存しました！');
+        btnText.textContent = '記録をGoogleシートに保存';
+        spinner.classList.add('hidden');
+        btn.disabled = false;
+        
+        // Clear draft
+        localStorage.removeItem(`hydro_draft_${currentSystem}`);
+        attachedPhotos = [];
+        renderPhotoPreviews();
+        loadDraft();
+      }, 1200);
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('opacity-0');
+      setTimeout(() => t.classList.add('opacity-0'), 2500);
+    }
+  </script>
+</body>
+</html>

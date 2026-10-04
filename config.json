@@ -1,0 +1,88 @@
+{
+  "project_name": "HydroDaily",
+  "version": "1.2.0",
+  "fertilizer": {
+    "name": "OAT House 100x Concentrate",
+    "rate_ml_per_l_per_ec": 4.0,
+    "solutions": [
+      "A液 (1号+5号)",
+      "B液 (2号)"
+    ]
+  },
+  "systems": [
+    {
+      "id": "bato",
+      "display_name": "BatoBucket",
+      "tank_volume_l": 94,
+      "default_target_ec": 2.2,
+      "primary_crops": [
+        "スティックセニョール",
+        "秋ナス"
+      ],
+      "water_refill": "automatic_constant"
+    },
+    {
+      "id": "dwc",
+      "display_name": "DWC / NFT",
+      "tank_volume_l": 140,
+      "default_target_ec": 1.4,
+      "primary_crops": [
+        "サンチュ",
+        "青ネギ",
+        "小松菜",
+        "大葉"
+      ],
+      "water_refill": "automatic_constant"
+    },
+    {
+      "id": "tower",
+      "display_name": "タワー型",
+      "tank_volume_l": 19,
+      "default_target_ec": 1.8,
+      "primary_crops": [
+        "スティックセニョール"
+      ],
+      "water_refill": "automatic_constant"
+    }
+  ],
+  "pesticides_initial_list": [
+    {
+      "name": "粘着くん液剤",
+      "active_ingredient": "ヒドロキシプロピル化リン酸架橋デンプン液剤 (5.0%)",
+      "target_crops": "野菜類",
+      "target_pests": [
+        "アブラムシ類",
+        "ハダニ類",
+        "コナジラミ類",
+        "うどんこ病"
+      ],
+      "default_dilution": 100,
+      "timing": "収穫前日まで",
+      "limit_times": "なし（物理防除）",
+      "unit": "mL"
+    }
+  ],
+  "photo_settings": {
+    "max_count": 5,
+    "naming_format": "{YYYYMMDD}_{system_id}_{index}.jpg",
+    "folder_path": "Antigravity_Inbox/photos"
+  },
+  "diary_settings": {
+    "search_range_days": 7
+  },
+  "sheet_settings": {
+    "sheet_name": "cultivation_logs",
+    "columns": [
+      "timestamp",
+      "date",
+      "system_id",
+      "current_ec",
+      "target_ec",
+      "added_ml",
+      "ph",
+      "water_temp",
+      "memo",
+      "photo_urls"
+    ]
+  }
+}
