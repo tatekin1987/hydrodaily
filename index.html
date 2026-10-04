@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#047857">
+  <link rel="manifest" href="manifest.json">
   <title>HydroDaily - 水耕栽培水質管理 & 追肥日誌</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -188,7 +190,7 @@
 
         <div>
           <label class="block text-xs font-semibold text-slate-500 mb-1">散布水量 (mL)</label>
-          <input type="number" id="input-water-ml" data-testid="input-water-ml" placeholder="例: 1000 (1リットル)" value="1000"
+          <input type="number" id="input-water-ml" data-testid="input-water-ml" placeholder="例: 3000 (3リットル)" value="3000"
             class="w-full text-xl font-bold text-slate-800 bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none"
             oninput="calculatePesticide()">
         </div>
@@ -223,10 +225,10 @@
         <div class="mt-4 pt-4 border-t border-slate-100 bg-amber-50/60 rounded-xl p-4 text-center">
           <span class="text-xs font-bold text-amber-800 uppercase tracking-wide">必要農薬量</span>
           <div class="mt-1 flex items-baseline justify-center space-x-1">
-            <span id="display-pesticide-ml" data-testid="display-pesticide-ml" class="text-4xl font-black text-amber-700">10.0</span>
+            <span id="display-pesticide-ml" data-testid="display-pesticide-ml" class="text-4xl font-black text-amber-700">30.0</span>
             <span class="text-base font-bold text-amber-800">mL / g</span>
           </div>
-          <p id="pesticide-formula-desc" class="text-[11px] text-slate-400 mt-1">1000 mL ÷ 100倍 = 10.0 mL</p>
+          <p id="pesticide-formula-desc" class="text-[11px] text-slate-400 mt-1">3000 mL ÷ 100倍 = 30.0 mL</p>
         </div>
       </div>
     </div>
@@ -282,6 +284,11 @@
       selectSystem(savedSys);
       loadDraft();
       calculatePesticide();
+
+      // Register Service Worker for PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Reg Failed:', err));
+      }
     });
 
     // Switch Fertilizer / Pesticide Mode
