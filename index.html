@@ -23,50 +23,56 @@
     /* iOS / Mobile safe area & touch optimization */
     body { -webkit-tap-highlight-color: transparent; }
     .pb-safe { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
+    .aspect-square { aspect-ratio: 1 / 1; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans select-none">
 
   <!-- Header -->
-  <header class="bg-emerald-700 text-white shadow-md sticky top-0 z-30">
-    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+  <header class="bg-white border-b sticky top-0 z-30 shadow-sm">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <span class="text-2xl">🌱</span>
         <div>
-          <h1 class="text-lg font-bold tracking-tight leading-tight">HydroDaily</h1>
-          <p id="today-date-display" class="text-xs text-emerald-100 font-medium"></p>
+          <h1 class="font-bold text-lg leading-tight flex items-center gap-1.5">
+            HydroDaily
+            <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">v1.4</span>
+          </h1>
+          <p id="today-date-display" class="text-xs text-gray-500">2026年10月4日 (日)</p>
         </div>
       </div>
-      <!-- Actions: Mode Tabs + Settings -->
-      <div class="flex items-center space-x-1.5">
-        <div class="flex bg-emerald-800/60 p-0.5 rounded-lg text-xs font-semibold">
-          <button id="mode-tab-fert" data-testid="mode-fertilizer" onclick="switchMode('fert')" class="px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition">💧 液肥</button>
-          <button id="mode-tab-pest" data-testid="mode-pesticide" onclick="switchMode('pest')" class="px-3 py-1.5 rounded-md text-emerald-100 hover:text-white transition">🧪 農薬</button>
-        </div>
-        <button onclick="openSettingsModal()" data-testid="btn-settings" class="p-1.5 bg-emerald-800/60 hover:bg-emerald-800 active:bg-emerald-900 rounded-lg text-sm text-emerald-100 hover:text-white transition" title="Google連携設定">
-          ⚙️
-        </button>
+      <div class="flex items-center space-x-2">
+        <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span class="w-1.5 h-1.5 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+          0.2s 爆速起動
+        </span>
       </div>
     </div>
 
-    <!-- System Selector (Fertilizer Mode Only) -->
-    <div id="system-selector-bar" class="bg-emerald-800/90 px-4 py-2 border-t border-emerald-600/50">
-      <div class="max-w-md mx-auto flex space-x-2">
-        <button data-testid="tab-bato" onclick="selectSystem('bato')" id="tab-bato" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center transition bg-white text-emerald-800 shadow-sm">
-          Bato (94L)
-        </button>
-        <button data-testid="tab-dwc" onclick="selectSystem('dwc')" id="tab-dwc" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center transition text-emerald-100 hover:bg-emerald-700/60">
-          DWC (140L)
-        </button>
-        <button data-testid="tab-tower" onclick="selectSystem('tower')" id="tab-tower" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center transition text-emerald-100 hover:bg-emerald-700/60">
-          タワー (19L)
-        </button>
-      </div>
+    <!-- Navigation Tabs (5 Tabs) -->
+    <div class="max-w-5xl mx-auto px-2 overflow-x-auto no-scrollbar flex space-x-1 border-t bg-gray-50/50">
+      <button onclick="switchTab('record')" id="tab-btn-record" class="tab-btn px-3.5 py-2.5 text-sm font-bold border-b-2 border-emerald-600 text-emerald-600 flex items-center gap-1.5 whitespace-nowrap">
+        <span>💧</span> 記録
+      </button>
+      <button onclick="switchTab('plan')" id="tab-btn-plan" class="tab-btn px-3.5 py-2.5 text-sm font-semibold text-gray-600 hover:text-emerald-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
+        <span>📅</span> プラン
+      </button>
+      <button onclick="switchTab('gallery')" id="tab-btn-gallery" class="tab-btn px-3.5 py-2.5 text-sm font-semibold text-gray-600 hover:text-emerald-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
+        <span>📸</span> 写真
+      </button>
+      <button onclick="switchTab('timeline')" id="tab-btn-timeline" class="tab-btn px-3.5 py-2.5 text-sm font-semibold text-gray-600 hover:text-emerald-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
+        <span>📜</span> タイムライン
+      </button>
+      <button onclick="switchTab('pesticide')" id="tab-btn-pesticide" class="tab-btn px-3.5 py-2.5 text-sm font-semibold text-gray-600 hover:text-emerald-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
+        <span>🧪</span> 農薬電卓
+      </button>
     </div>
   </header>
 
   <!-- Main Container -->
-  <main class="flex-1 max-w-md mx-auto w-full p-4 space-y-4 pb-safe">
+  <main class="max-w-5xl mx-auto w-full px-4 py-5 flex-1 space-y-4 pb-safe">
 
     <!-- ==================== FERTILIZER MODE ==================== -->
     <div id="section-fertilizer" class="space-y-4">
@@ -344,31 +350,18 @@
       }
     });
 
-    // Switch Fertilizer / Pesticide Mode
-    function switchMode(mode) {
-      currentMode = mode;
-      const fertSec = document.getElementById('section-fertilizer');
-      const pestSec = document.getElementById('section-pesticide');
-      const sysBar = document.getElementById('system-selector-bar');
-      const bottomBar = document.getElementById('fixed-bottom-bar');
-      const tabFert = document.getElementById('mode-tab-fert');
-      const tabPest = document.getElementById('mode-tab-pest');
+    // Switch Tab
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(el => {
+        el.classList.remove('border-emerald-600', 'text-emerald-600', 'font-bold');
+        el.classList.add('border-transparent', 'text-gray-600', 'font-semibold');
+      });
 
-      if (mode === 'fert') {
-        fertSec.classList.remove('hidden');
-        pestSec.classList.add('hidden');
-        sysBar.classList.remove('hidden');
-        bottomBar.classList.remove('hidden');
-        tabFert.className = 'px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition';
-        tabPest.className = 'px-3 py-1.5 rounded-md text-emerald-100 hover:text-white transition';
-      } else {
-        fertSec.classList.add('hidden');
-        pestSec.classList.remove('hidden');
-        sysBar.classList.add('hidden');
-        bottomBar.classList.add('hidden');
-        tabPest.className = 'px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition';
-        tabFert.className = 'px-3 py-1.5 rounded-md text-emerald-100 hover:text-white transition';
-      }
+      document.getElementById('view-' + tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById('tab-btn-' + tabId);
+      activeBtn.classList.remove('border-transparent', 'text-gray-600', 'font-semibold');
+      activeBtn.classList.add('border-emerald-600', 'text-emerald-600', 'font-bold');
     }
 
     // Select System Tab
