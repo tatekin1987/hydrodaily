@@ -287,13 +287,15 @@
 
   <!-- Client Logic -->
   <script>
+    const DEFAULT_GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwuuQOjC-t1wUgd8FKnkLlCsiL-T_LN1n6GTbSLUO_UV-274yNh0zNA8ICkniabzlfN/exec';
+
     function getGasEndpoint() {
       const saved = localStorage.getItem('hydro_gas_endpoint');
       if (saved) return saved;
       if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
         return '/dummy-gas-endpoint';
       }
-      return '';
+      return DEFAULT_GAS_ENDPOINT;
     }
 
     function openSettingsModal() {

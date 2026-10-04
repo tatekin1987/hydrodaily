@@ -1,5 +1,5 @@
 /**
- * HydroDaily Google Apps Script Backend
+ * HydroDaily Google Apps Script Backend (Standalone & Bound Compatible)
  * 
  * - doPost: 栽培ログの記録 & 写真のGoogle Drive保存
  * - doGet: 過去の同月同日±7日間の10年日記データの抽出・返却
@@ -8,6 +8,31 @@
 const SHEET_NAME = 'cultivation_logs';
 const DRIVE_BASE_FOLDER = 'Antigravity_Inbox';
 const PHOTOS_FOLDER = 'photos';
+const DEFAULT_SPREADSHEET_NAME = 'HydroDaily_栽培ログ';
+
+function getOrCreateSpreadsheet() {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss) return ss;
+
+  const props = PropertiesService.getScriptProperties();
+  let sheetId = props.getProperty('SPREADSHEET_ID');
+  if (sheetId) {
+    try {
+      return SpreadsheetApp.openById(sheetId);
+    } catch (e) {}
+  }
+
+  // Googleドライブから既存シートを検索、なければ完全自動作成
+  const files = DriveApp.getFilesByName(DEFAULT_SPREADSHEET_NAME);
+  if (files.hasNext()) {
+    ss = SpreadsheetApp.open(files.next());
+  } else {
+    ss = SpreadsheetApp.create(DEFAULT_SPREADSHEET_NAME);
+  }
+
+  props.setProperty('SPREADSHEET_ID', ss.getId());
+  return ss;
+}
 
 function doPost(e) {
   try {
@@ -16,7 +41,7 @@ function doPost(e) {
       return responseJson({ status: 'error', message: 'Invalid action' });
     }
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getOrCreateSpreadsheet();
     let sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) {
       sheet = ss.insertSheet(SHEET_NAME);
@@ -61,6 +86,7 @@ function doPost(e) {
     return responseJson({
       status: 'success',
       saved_row: sheet.getLastRow(),
+      spreadsheet_url: ss.getUrl(),
       photo_urls: photoUrls
     });
   } catch (err) {
@@ -77,14 +103,13 @@ function doGet(e) {
       const day = parseInt(e.parameter.day, 10);
       const range = parseInt(e.parameter.range, 10) || 7;
 
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const ss = getOrCreateSpreadsheet();
       const sheet = ss.getSheetByName(SHEET_NAME);
       if (!sheet || sheet.getLastRow() <= 1) {
         return responseJson({ status: 'success', logs: [] });
       }
 
       const rows = sheet.getDataRange().getValues();
-      const headers = rows[0];
       const results = [];
 
       // Skip header
