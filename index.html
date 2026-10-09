@@ -405,6 +405,22 @@
 
     <!-- TAB 4: タイムライン日誌 (#view-timeline) -->
     <section id="view-timeline" class="tab-view hidden space-y-4">
+      <!-- 同期＆アクションバー -->
+      <div class="flex items-center justify-between bg-white p-3 rounded-xl border shadow-sm">
+        <div class="flex items-center gap-2">
+          <button id="btn-sync-timeline" onclick="syncTimelineFromGas()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition shadow-sm active:scale-95">
+            <span id="sync-spinner" class="inline-block">🔄</span>
+            <span>クラウド同期</span>
+          </button>
+          <span id="timeline-sync-status" class="text-xs font-bold text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-200">
+            未同期
+          </span>
+        </div>
+        <button onclick="openJournalEditor()" class="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm">
+          <span>✏️</span> 日誌を書く
+        </button>
+      </div>
+
       <div class="bg-white p-3 rounded-xl border shadow-sm">
         <div class="relative">
           <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">🔍</span>
@@ -704,6 +720,8 @@
       loadDraft();
       calculatePesticide();
       renderSavedTimelineEntries();
+      // サイレントにクラウド同期を実行
+      syncTimelineFromGas(true);
 
       // Register Service Worker for PWA
       if ('serviceWorker' in navigator) {
@@ -1147,14 +1165,17 @@
 
       // 3. GAS URL連携時は非同期バックグラウンド送信
       const gasUrl = (typeof getGasEndpoint === 'function') ? getGasEndpoint() : null;
-      if (gasUrl && gasUrl !== '/dummy-gas-endpoint') {
+      if (gasUrl) {
         fetch(gasUrl, {
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'journal',
+            id: newEntry.id,
+            timestamp: newEntry.timestamp,
             date: newEntry.date,
+            dayName: newEntry.dayName,
             system: newEntry.system,
             ec: newEntry.ec,
             memo: newEntry.memo,
@@ -1182,7 +1203,8 @@
       const container = document.getElementById('timeline-feed-container');
       if (!container) return;
       const article = document.createElement('article');
-      article.className = 'timeline-card bg-white p-5 rounded-2xl border shadow-sm space-y-3 transition-all';
+      article.className = 'timeline-card dynamic-timeline-card bg-white p-5 rounded-2xl border shadow-sm space-y-3 transition-all';
+      if (entry.id) article.dataset.entryId = entry.id;
       
       let photoHtml = '';
       if (entry.photos && entry.photos.length > 0) {
@@ -1219,9 +1241,14 @@
       }
     }
 
-    function renderSavedTimelineEntries() {
+    function renderSavedTimelineEntries(entries = null) {
       try {
-        const stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
+        const container = document.getElementById('timeline-feed-container');
+        if (!container) return;
+        const existingDynamic = container.querySelectorAll('.dynamic-timeline-card');
+        existingDynamic.forEach(el => el.remove());
+
+        const stored = entries || JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
         if (Array.isArray(stored) && stored.length > 0) {
           for (let i = stored.length - 1; i >= 0; i--) {
             prependTimelineCard(stored[i], true);
@@ -1229,6 +1256,75 @@
         }
       } catch (e) {
         console.warn('Render saved timeline entries failed:', e);
+      }
+    }
+
+    async function syncTimelineFromGas(isSilent = false) {
+      const syncBtn = document.getElementById('btn-sync-timeline');
+      const syncSpinner = document.getElementById('sync-spinner');
+      const syncStatus = document.getElementById('timeline-sync-status');
+
+      if (syncSpinner) syncSpinner.classList.add('animate-spin');
+      if (syncStatus) {
+        syncStatus.className = 'text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200';
+        syncStatus.innerText = '⏳ 同期中...';
+      }
+
+      const gasUrl = (typeof getGasEndpoint === 'function') ? getGasEndpoint() : DEFAULT_GAS_ENDPOINT;
+      const separator = gasUrl.includes('?') ? '&' : '?';
+      const reqUrl = gasUrl + separator + 'action=get_timeline';
+
+      try {
+        const res = await fetch(reqUrl);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        if (data && data.status === 'success' && Array.isArray(data.entries)) {
+          const localEntries = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
+          const entryMap = new Map();
+
+          // ローカルの未送信データを保護
+          localEntries.forEach(entry => {
+            if (entry && entry.id) entryMap.set(entry.id, entry);
+          });
+
+          // クラウドのデータで更新
+          data.entries.forEach(entry => {
+            if (entry && entry.id) {
+              entryMap.set(entry.id, {
+                ...entry,
+                photos: Array.isArray(entry.photos) ? entry.photos : []
+              });
+            }
+          });
+
+          const mergedEntries = Array.from(entryMap.values());
+          mergedEntries.sort((a, b) => {
+            const timeA = a.timestamp || a.date || '';
+            const timeB = b.timestamp || b.date || '';
+            return timeB.localeCompare(timeA);
+          });
+
+          localStorage.setItem('hydro_timeline_entries', JSON.stringify(mergedEntries));
+          renderSavedTimelineEntries(mergedEntries);
+
+          if (syncStatus) {
+            syncStatus.className = 'text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200';
+            syncStatus.innerText = `🟢 同期済 (${mergedEntries.length}件)`;
+          }
+          if (!isSilent) showToast(`✅ クラウドと同期完了 (${mergedEntries.length}件)`);
+        } else {
+          throw new Error((data && data.message) || '同期レスポンスが不正です');
+        }
+      } catch (err) {
+        console.warn('Timeline sync failed:', err);
+        if (syncStatus) {
+          syncStatus.className = 'text-xs font-bold text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-200';
+          syncStatus.innerText = '⚠️ オフライン表示';
+        }
+        if (!isSilent) showToast('⚠️ オフラインまたは同期エラー（ローカルデータを表示中）');
+      } finally {
+        if (syncSpinner) syncSpinner.classList.remove('animate-spin');
       }
     }
 
@@ -1274,7 +1370,7 @@
     }
 
     // Photo Gallery Lightbox
-    const photoList = [
+    let photoList = [
       { src: "https://images.unsplash.com/photo-1592417817098-8f3d6910985c?w=1000", caption: "2026年9月27日 | ナス収穫 (BatoBucket)" },
       { src: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1000", caption: "2026年9月15日 | サンチュ・小松菜 (DWC)" },
       { src: "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=1000", caption: "2026年8月25日 | PC筑陽ナス (BatoBucket)" },

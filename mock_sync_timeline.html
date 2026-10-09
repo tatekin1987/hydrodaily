@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HydroDaily - タイムライン同期モック</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 max-w-lg mx-auto">
+  <header class="mb-4">
+    <h1 class="text-xl font-black text-gray-800">HydroDaily タイムライン同期モック</h1>
+    <p class="text-xs text-gray-500">PC ⇔ スマホ クラウド完全同期 & Google Drive画像表示</p>
+  </header>
+
+  <!-- タイムライン同期バー -->
+  <div class="bg-white p-3.5 rounded-2xl border shadow-sm space-y-3 mb-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <button id="btn-sync-timeline" onclick="mockSync()" class="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold shadow-sm transition active:scale-95">
+          <span id="sync-icon" class="inline-block transition-transform duration-500">🔄</span>
+          <span>クラウド同期</span>
+        </button>
+        <span id="timeline-sync-status" class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+          🟢 同期済 (3件)
+        </span>
+      </div>
+      <button class="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm">
+        ✏️ 日誌を書く
+      </button>
+    </div>
+
+    <!-- 検索バー -->
+    <div class="relative">
+      <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">🔍</span>
+      <input type="text" placeholder="日誌をキーワード検索..." class="w-full pl-9 pr-4 py-2 border rounded-xl bg-gray-50 text-sm">
+    </div>
+  </div>
+
+  <!-- タイムラインフィード -->
+  <div id="timeline-feed" class="space-y-4">
+    <article class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+      <div class="flex items-center justify-between border-b pb-2">
+        <div>
+          <h3 class="text-xl font-black text-gray-900">2026年10月10日</h3>
+          <span class="text-xs text-gray-500 font-semibold">土曜日</span>
+        </div>
+        <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
+          BatoBucket | EC: 2.2
+        </span>
+      </div>
+      <p class="text-sm text-gray-800">スマホで撮影してクラウドに送信された日誌。PC側でも即座に高画質画像と日誌が反映されます。</p>
+      <div class="flex gap-2">
+        <img src="https://images.unsplash.com/photo-1592417817098-8f3d6910985c?w=500&auto=format&fit=crop&q=80" class="w-20 h-20 rounded-xl object-cover border cursor-pointer">
+      </div>
+    </article>
+  </div>
+
+  <script>
+    function mockSync() {
+      const icon = document.getElementById('sync-icon');
+      const status = document.getElementById('timeline-sync-status');
+      icon.classList.add('animate-spin');
+      status.className = 'text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200';
+      status.innerText = '⏳ 同期中...';
+
+      setTimeout(() => {
+        icon.classList.remove('animate-spin');
+        status.className = 'text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200';
+        status.innerText = '🟢 同期完了 (最新4件)';
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
