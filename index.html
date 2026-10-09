@@ -38,7 +38,7 @@
         <div>
           <h1 class="font-bold text-lg leading-tight flex items-center gap-1.5">
             HydroDaily
-            <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">v1.4</span>
+            <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">v1.5</span>
           </h1>
           <p class="text-xs text-gray-500" id="today-date-display">2026年10月4日 (日)</p>
         </div>
@@ -77,20 +77,28 @@
   <!-- Main Container -->
   <main class="max-w-5xl mx-auto w-full px-4 py-5 flex-1 space-y-4">
 
-    <!-- 10年日記再現：上部クイック投稿ボタン（📷 写真から書く / ✏️ ペンで書く） -->
+    <!-- 隠しファイルインプット（OS標準のギャラリー / カメラ直結） -->
+    <input type="file" id="input-gallery-pick" accept="image/*" multiple class="hidden" onchange="handleGallerySelected(this)">
+    <input type="file" id="input-camera-capture" accept="image/*" capture="environment" class="hidden" onchange="handleGallerySelected(this)">
+
+    <!-- 10年日記再現：上部クイック投稿ボタン（写真 / カメラ / 文字） -->
     <div class="bg-white p-4 rounded-2xl border shadow-sm">
       <div class="flex items-center justify-between mb-2">
         <span class="text-xs font-bold text-gray-500">2026年 日曜日 277/365</span>
         <span class="text-xs text-emerald-600 font-semibold">ワンタップで新しい日誌を書く</span>
       </div>
-      <div class="grid grid-cols-2 gap-3">
-        <button onclick="openEditorWithPhoto()" id="btn-quick-camera" class="py-3 px-4 rounded-2xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-600 flex items-center justify-center gap-2 font-bold text-base transition shadow-sm active:scale-98">
-          <span class="text-2xl">📷</span>
-          <span class="text-sky-800 text-sm">写真から書く</span>
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="triggerGalleryPick()" id="btn-quick-gallery" class="py-3 px-2 rounded-2xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 flex flex-col items-center justify-center gap-1 font-bold text-xs transition shadow-sm active:scale-95">
+          <span class="text-2xl">🖼️</span>
+          <span>写真から書く</span>
         </button>
-        <button onclick="openEditorWithText()" id="btn-quick-pen" class="py-3 px-4 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-600 flex items-center justify-center gap-2 font-bold text-base transition shadow-sm active:scale-98">
+        <button onclick="triggerCameraCapture()" id="btn-quick-camera" class="py-3 px-2 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 flex flex-col items-center justify-center gap-1 font-bold text-xs transition shadow-sm active:scale-95">
+          <span class="text-2xl">📸</span>
+          <span>カメラで撮る</span>
+        </button>
+        <button onclick="openEditorWithText()" id="btn-quick-pen" class="py-3 px-2 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 flex flex-col items-center justify-center gap-1 font-bold text-xs transition shadow-sm active:scale-95">
           <span class="text-2xl">✏️</span>
-          <span class="text-amber-800 text-sm">文字から書く</span>
+          <span>文字から書く</span>
         </button>
       </div>
     </div>
@@ -550,48 +558,25 @@
     <div class="px-4 py-3 border-b flex items-center justify-between bg-white sticky top-0">
       <button onclick="closeJournalEditor()" class="text-gray-600 hover:text-gray-900 text-lg p-1 font-bold">✕</button>
       <div class="text-sm font-bold text-gray-800 flex items-center gap-1">
-        <span>📅</span> 2026/10/04 日曜日
+        <span>📅</span> 本日の栽培日誌
       </div>
-      <button onclick="saveJournalEntry()" class="px-4 py-1.5 bg-rose-500 hover:bg-rose-600 text-white text-sm font-black rounded-full shadow-sm transition">保存</button>
+      <button id="btn-save-journal" onclick="saveJournalEntry()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black rounded-full shadow-sm transition">保存</button>
     </div>
     <div class="flex-1 p-4 overflow-y-auto">
-      <textarea id="editor-textarea" rows="10" placeholder="本日の栽培状況、気づき、収穫、反省を入力してください..." class="w-full h-full text-base leading-relaxed text-gray-800 outline-none resize-none bg-transparent placeholder-gray-400"></textarea>
+      <textarea id="editor-textarea" rows="10" placeholder="本日の水耕の状況、気づき、収穫、追肥の様子を入力してください..." class="w-full h-full text-base leading-relaxed text-gray-800 outline-none resize-none bg-transparent placeholder-gray-400"></textarea>
     </div>
     <div id="editor-photo-tray" class="px-4 py-3 border-t bg-gray-50/70">
+      <p class="text-[11px] font-bold text-gray-400 mb-1.5">添付写真（＋ボタンでギャラリーからポチポチ追加 / ✕で削除）:</p>
       <div class="flex items-center gap-2 overflow-x-auto no-scrollbar" id="editor-thumbnails"></div>
     </div>
     <div class="px-4 py-2.5 border-t bg-white flex items-center justify-between text-gray-500">
       <div class="flex items-center space-x-4 text-xl">
-        <button onclick="openEditorWithPhoto()" title="写真追加" class="hover:text-emerald-600">📷</button>
-        <button onclick="insertTag('#収穫')" title="タグ追加" class="text-sm font-bold bg-gray-100 hover:bg-200 px-2 py-0.5 rounded">#収穫</button>
+        <button onclick="triggerGalleryPick()" title="アルバムから写真を追加" class="hover:text-emerald-600 text-lg" id="btn-editor-gallery">🖼️</button>
+        <button onclick="triggerCameraCapture()" title="カメラで今すぐ撮影" class="hover:text-emerald-600 text-lg" id="btn-editor-camera">📸</button>
+        <button onclick="insertTag('#収穫')" title="タグ追加" class="text-sm font-bold bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded text-gray-700">#収穫</button>
+        <button onclick="insertTag('#追肥')" title="タグ追加" class="text-sm font-bold bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded text-gray-700">#追肥</button>
       </div>
       <span class="text-xs text-gray-400" id="editor-char-count">0文字</span>
-    </div>
-  </div>
-
-  <!-- 写真選択ボトムシート (#photo-picker-sheet) -->
-  <div id="photo-picker-sheet" class="fixed inset-0 bg-black/50 z-50 hidden flex flex-col justify-end">
-    <div class="bg-white rounded-t-3xl p-5 space-y-4 max-w-lg mx-auto w-full shadow-2xl">
-      <div class="flex justify-between items-center border-b pb-3">
-        <span class="text-sm font-bold text-gray-800">写真を選択</span>
-        <button onclick="closePhotoPicker()" class="text-gray-400 hover:text-gray-600">✕</button>
-      </div>
-      <div class="grid grid-cols-3 gap-2 py-2">
-        <div onclick="selectSamplePhoto(0, this)" class="sample-photo-option relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent">
-          <img src="https://images.unsplash.com/photo-1592417817098-8f3d6910985c?w=500" class="w-full h-full object-cover">
-          <span class="checkmark hidden absolute top-1 right-1 bg-rose-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">✓</span>
-        </div>
-        <div onclick="selectSamplePhoto(1, this)" class="sample-photo-option relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent">
-          <img src="https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=500" class="w-full h-full object-cover">
-          <span class="checkmark hidden absolute top-1 right-1 bg-rose-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">✓</span>
-        </div>
-        <div onclick="selectSamplePhoto(2, this)" class="sample-photo-option relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent">
-          <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500" class="w-full h-full object-cover">
-          <span class="checkmark hidden absolute top-1 right-1 bg-rose-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">✓</span>
-        </div>
-      </div>
-      <button onclick="confirmPhotoSelection()" class="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl shadow-md transition">選択を追加して記事を書く</button>
-      <button onclick="closePhotoPicker()" class="w-full py-2.5 text-gray-500 font-bold text-sm">キャンセル</button>
     </div>
   </div>
 
@@ -693,6 +678,7 @@
       selectSystem(savedSys);
       loadDraft();
       calculatePesticide();
+      renderSavedTimelineEntries();
 
       // Register Service Worker for PWA
       if ('serviceWorker' in navigator) {
@@ -981,40 +967,23 @@
       closePlanEditor();
     }
 
-    // Journal Entry Flow
+    // Journal Entry & Timeline Flow
     let selectedPhotos = [];
 
+    // 🖼️ ギャラリー直接起動（写真がずらっと並んでポチポチ選べる）
+    function triggerGalleryPick() {
+      const input = document.getElementById('input-gallery-pick');
+      if (input) input.click();
+    }
+
+    // 📸 カメラ直接起動（現場で今すぐ撮影）
+    function triggerCameraCapture() {
+      const input = document.getElementById('input-camera-capture');
+      if (input) input.click();
+    }
+
     function openEditorWithPhoto() {
-      document.getElementById('photo-picker-sheet').classList.remove('hidden');
-    }
-
-    function closePhotoPicker() {
-      document.getElementById('photo-picker-sheet').classList.add('hidden');
-    }
-
-    function selectSamplePhoto(idx, el) {
-      const check = el.querySelector('.checkmark');
-      const sampleUrls = [
-        "https://images.unsplash.com/photo-1592417817098-8f3d6910985c?w=500",
-        "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=500",
-        "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500"
-      ];
-      if (check.classList.contains('hidden')) {
-        check.classList.remove('hidden');
-        el.classList.add('border-rose-500');
-        selectedPhotos.push(sampleUrls[idx]);
-      } else {
-        check.classList.add('hidden');
-        el.classList.remove('border-rose-500');
-        selectedPhotos = selectedPhotos.filter(u => u !== sampleUrls[idx]);
-      }
-    }
-
-    function confirmPhotoSelection() {
-      closePhotoPicker();
-      renderEditorThumbnails();
-      document.getElementById('journal-editor-modal').classList.remove('hidden');
-      document.getElementById('editor-textarea').focus();
+      triggerGalleryPick();
     }
 
     function openEditorWithText() {
@@ -1024,20 +993,76 @@
       document.getElementById('editor-textarea').focus();
     }
 
+    function closeJournalEditor() {
+      document.getElementById('journal-editor-modal').classList.add('hidden');
+    }
+
+    // 端末ファイル選択ハンドラ（複数枚対応・自動Canvas圧縮）
+    async function handleGallerySelected(input) {
+      if (!input.files || input.files.length === 0) return;
+      for (const file of Array.from(input.files)) {
+        if (!file.type.startsWith('image/')) continue;
+        const compressedBase64 = await compressImage(file, 1200, 0.8);
+        selectedPhotos.push(compressedBase64);
+      }
+      input.value = ''; // リセット
+
+      // エディタを開いてサムネイルを描画
+      renderEditorThumbnails();
+      document.getElementById('journal-editor-modal').classList.remove('hidden');
+      document.getElementById('editor-textarea').focus();
+    }
+
+    // クライアント側Canvas画像圧縮ユーティリティ（長辺1200px・JPEG 0.8）
+    function compressImage(file, maxSide, quality) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            if (w > h && w > maxSide) {
+              h = Math.round((h * maxSide) / w);
+              w = maxSide;
+            } else if (h > maxSide) {
+              w = Math.round((w * maxSide) / h);
+              h = maxSide;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 写真トレイのレンダリング
     function renderEditorThumbnails() {
       const tray = document.getElementById('editor-thumbnails');
+      if (!tray) return;
       tray.innerHTML = '';
+
+      // 選択済みの写真サムネイル
       selectedPhotos.forEach((src, idx) => {
         const div = document.createElement('div');
-        div.className = 'relative w-16 h-16 rounded-xl overflow-hidden border flex-shrink-0';
+        div.className = 'relative w-16 h-16 rounded-xl overflow-hidden border-2 border-emerald-400 flex-shrink-0 shadow-xs';
         div.innerHTML = `<img src="${src}" class="w-full h-full object-cover">
-          <button onclick="removeEditorPhoto(${idx})" class="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">✕</button>`;
+          <button onclick="removeEditorPhoto(${idx})" class="absolute top-0.5 right-0.5 bg-black/70 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] transition font-bold">✕</button>`;
         tray.appendChild(div);
       });
+
+      // ＋ボタン（直接ギャラリーを開いてさらにポチポチ追加！）
       const addBtn = document.createElement('button');
-      addBtn.onclick = openEditorWithPhoto;
-      addBtn.className = 'w-16 h-16 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 hover:text-gray-600 hover:border-gray-400 flex items-center justify-center text-xl flex-shrink-0';
-      addBtn.innerText = '＋';
+      addBtn.onclick = triggerGalleryPick;
+      addBtn.id = 'btn-picker-add-more';
+      addBtn.className = 'w-16 h-16 rounded-xl border-2 border-dashed border-gray-300 hover:border-sky-500 hover:bg-sky-50/50 text-gray-400 hover:text-sky-600 flex flex-col items-center justify-center flex-shrink-0 transition active:scale-95 cursor-pointer';
+      addBtn.innerHTML = '<span class="text-xl font-bold">＋</span><span class="text-[9px] font-semibold text-gray-400">写真追加</span>';
       tray.appendChild(addBtn);
     }
 
@@ -1046,19 +1071,112 @@
       renderEditorThumbnails();
     }
 
-    function closeJournalEditor() {
-      document.getElementById('journal-editor-modal').classList.add('hidden');
-    }
-
+    // タイムライン保存 & 動的反映
     function saveJournalEntry() {
-      const text = document.getElementById('editor-textarea').value;
+      const text = document.getElementById('editor-textarea').value.trim();
       if (!text && selectedPhotos.length === 0) {
         alert('メモまたは写真を入力してください');
         return;
       }
-      showToast('✅ 日誌をスプレッドシートに保存しました！');
+
+      const sysName = (typeof currentSystem !== 'undefined' && SYSTEM_CONFIG && SYSTEM_CONFIG[currentSystem]) 
+        ? SYSTEM_CONFIG[currentSystem].name 
+        : 'BatoBucket';
+      const currentEc = document.getElementById('input-current-ec')?.value || '2.0';
+
+      const newEntry = {
+        id: 'entry_' + Date.now(),
+        date: new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }),
+        dayName: new Date().toLocaleDateString('ja-JP', { weekday: 'long' }),
+        system: sysName,
+        ec: currentEc,
+        memo: text,
+        photos: [...selectedPhotos],
+        timestamp: new Date().toISOString()
+      };
+
+      // 1. LocalStorageに保存
+      try {
+        const stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
+        stored.unshift(newEntry);
+        localStorage.setItem('hydro_timeline_entries', JSON.stringify(stored));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+
+      // 2. タイムライン先頭へ即座に描画
+      prependTimelineCard(newEntry, true);
+
+      // 3. GAS URL連携時は非同期バックグラウンド送信
+      const gasUrl = (typeof getGasEndpoint === 'function') ? getGasEndpoint() : null;
+      if (gasUrl && gasUrl !== '/dummy-gas-endpoint') {
+        fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'journal',
+            date: newEntry.date,
+            system: newEntry.system,
+            ec: newEntry.ec,
+            memo: newEntry.memo,
+            photos: newEntry.photos
+          })
+        }).catch(err => console.warn('Background sync failed:', err));
+      }
+
+      showToast('✅ 日誌を保存しました！');
       closeJournalEditor();
+      document.getElementById('editor-textarea').value = '';
+      selectedPhotos = [];
       switchTab('timeline');
+    }
+
+    function prependTimelineCard(entry, isPrepend) {
+      const container = document.getElementById('timeline-feed-container');
+      if (!container) return;
+      const article = document.createElement('article');
+      article.className = 'timeline-card bg-white p-5 rounded-2xl border shadow-sm space-y-3 transition-all';
+      
+      let photoHtml = '';
+      if (entry.photos && entry.photos.length > 0) {
+        photoHtml = `<div class="flex gap-2 pt-1 overflow-x-auto no-scrollbar">` +
+          entry.photos.map(p => `<img src="${p}" class="w-20 h-20 rounded-xl object-cover border cursor-pointer hover:opacity-90">`).join('') +
+          `</div>`;
+      }
+
+      article.innerHTML = `
+        <div class="flex items-center justify-between border-b pb-2">
+          <div>
+            <h3 class="text-xl font-black text-gray-900">${entry.date}</h3>
+            <span class="text-xs text-gray-500 font-semibold">${entry.dayName || ''}</span>
+          </div>
+          <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
+            ${entry.system || '水耕日誌'} | EC: ${entry.ec || '-'}
+          </span>
+        </div>
+        <p class="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">${entry.memo || ''}</p>
+        ${photoHtml}
+      `;
+
+      if (isPrepend) {
+        container.prepend(article);
+      } else {
+        container.appendChild(article);
+      }
+    }
+
+    function renderSavedTimelineEntries() {
+      try {
+        const stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
+        if (Array.isArray(stored) && stored.length > 0) {
+          for (let i = stored.length - 1; i >= 0; i--) {
+            prependTimelineCard(stored[i], true);
+          }
+        }
+      } catch (e) {
+        console.warn('Render saved timeline entries failed:', e);
+      }
     }
 
     function insertTag(tag) {

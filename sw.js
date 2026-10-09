@@ -1,5 +1,5 @@
 // HydroDaily Service Worker (Network-First Cache Busting)
-const CACHE_NAME = 'hydrodaily-v1.4.0';
+const CACHE_NAME = 'hydrodaily-v1.5.0';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
