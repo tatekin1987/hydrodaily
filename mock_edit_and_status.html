@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>【UIモック】日誌編集 ＆ 写真大画面拡大 ＆ 記録状況連動</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col pb-16">
+
+  <!-- Header -->
+  <header class="bg-white border-b sticky top-0 z-30 shadow-xs">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="text-xl">💧</span>
+        <div>
+          <h1 class="text-base font-black text-slate-900 tracking-tight">HydroDaily (UIモック v1.6)</h1>
+          <p class="text-[10px] text-emerald-600 font-bold">日誌編集 ＆ 写真拡大 ＆ 3系統記録状況連動</p>
+        </div>
+      </div>
+      <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Phase 5</span>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-md mx-auto w-full px-4 py-4 flex-1 space-y-4">
+
+    <!-- 1. リザーバー系統セレクター（本日の記録状況が動的連動） -->
+    <div class="bg-white p-3 rounded-2xl border shadow-sm space-y-2">
+      <div class="flex items-center justify-between">
+        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">リザーバー系統（本日の記録状況）</label>
+        <button onclick="resetDailyStatus()" class="text-[10px] text-gray-400 hover:text-red-600 font-bold">リセット</button>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <!-- BatoBucket -->
+        <button onclick="selectSystem('bato')" id="tab-bato" class="py-2.5 px-2 rounded-xl text-center font-bold text-xs bg-emerald-600 text-white shadow-sm flex flex-col items-center justify-center transition">
+          <span>BatoBucket</span>
+          <span class="text-[10px] opacity-90">94L・秋ナス</span>
+          <span id="tab-bato-status" class="mt-1 bg-white/20 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">⏳ 未記録</span>
+        </button>
+        <!-- DWC -->
+        <button onclick="selectSystem('dwc')" id="tab-dwc" class="py-2.5 px-2 rounded-xl text-center font-bold text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 flex flex-col items-center justify-center transition">
+          <span>DWC / NFT</span>
+          <span class="text-[10px] text-gray-500">140L・葉物</span>
+          <span id="tab-dwc-status" class="mt-1 bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-bold">⏳ 未記録</span>
+        </button>
+        <!-- タワー型 -->
+        <button onclick="selectSystem('tower')" id="tab-tower" class="py-2.5 px-2 rounded-xl text-center font-bold text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 flex flex-col items-center justify-center transition">
+          <span>タワー型</span>
+          <span class="text-[10px] text-gray-500">19L・トマト</span>
+          <span id="tab-tower-status" class="mt-1 bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-bold">⏳ 未記録</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- クイック保存シミュレーションボタン -->
+    <div class="bg-white p-3 rounded-2xl border shadow-sm flex gap-2">
+      <button onclick="simulateSaveRecord()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition">
+        💾 選択中系統の液肥を記録（記録済に更新）
+      </button>
+      <button onclick="openEditorForNew()" class="py-2.5 px-3 bg-sky-50 hover:bg-sky-100 text-sky-700 font-extrabold text-xs rounded-xl border border-sky-200 transition">
+        ✏️ 日誌を書く
+      </button>
+    </div>
+
+    <!-- 2. タイムラインフィード（編集ボタン ＆ 写真タップ拡大） -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between px-1">
+        <h2 class="text-xs font-bold text-gray-600 uppercase tracking-wider">タイムライン日誌</h2>
+        <span class="text-[11px] text-gray-400">写真をタップで大画面拡大</span>
+      </div>
+
+      <div id="timeline-feed-container" class="space-y-3">
+        <!-- 動的カードがここに並ぶ -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 3. 写真大画面モーダル (#photo-modal / Lightbox) -->
+  <div id="photo-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col justify-between p-4 backdrop-blur-sm animate-in fade-in duration-200">
+    <div class="flex justify-between items-center text-white">
+      <span id="modal-caption" class="text-xs font-bold truncate max-w-[80%]">写真プレビュー</span>
+      <button onclick="closeLightbox()" class="text-2xl text-gray-300 hover:text-white p-2">✕</button>
+    </div>
+    <div class="flex-1 flex items-center justify-center p-2" onclick="closeLightbox()">
+      <img id="modal-img" src="" alt="大画面写真" class="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl transition">
+    </div>
+    <p class="text-center text-gray-400 text-[11px]">タップで閉じる</p>
+  </div>
+
+  <!-- 4. 日誌エディタモーダル（新規作成 ＆ 編集兼用） -->
+  <div id="journal-editor-modal" class="fixed inset-0 bg-white z-50 hidden flex flex-col">
+    <div class="px-4 py-3 border-b flex items-center justify-between bg-white sticky top-0">
+      <button onclick="closeJournalEditor()" class="text-gray-600 hover:text-gray-900 text-lg p-1 font-bold">✕</button>
+      <div class="text-sm font-bold text-gray-800 flex items-center gap-1" id="editor-modal-title">
+        <span>📅</span> 本日の栽培日誌
+      </div>
+      <button id="btn-save-journal" onclick="saveJournalEntry()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black rounded-full shadow-sm transition">保存</button>
+    </div>
+    <div class="flex-1 p-4 overflow-y-auto">
+      <textarea id="editor-textarea" rows="8" placeholder="本日の水耕の状況、気づき、収穫、追肥の様子を入力してください..." class="w-full h-full text-sm leading-relaxed text-gray-800 outline-none resize-none bg-transparent placeholder-gray-400"></textarea>
+    </div>
+    <!-- 隠しファイルインプット -->
+    <input type="file" id="input-gallery-pick" accept="image/*" multiple class="hidden" onchange="handleFileSelect(this)">
+    <div id="editor-photo-tray" class="px-4 py-3 border-t bg-gray-50/70">
+      <p class="text-[11px] font-bold text-gray-400 mb-2">添付写真（＋で追加 / ✕で削除）:</p>
+      <div class="flex items-center gap-2 overflow-x-auto" id="editor-thumbnails"></div>
+    </div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-full text-xs font-bold shadow-lg opacity-0 pointer-events-none transition-all duration-300">
+    完了しました
+  </div>
+
+  <script>
+    let currentSystem = 'bato';
+    let editingEntryId = null; // nullなら新規、文字列ならそのIDを編集
+    let selectedPhotos = [];
+
+    const sampleInitialEntries = [
+      {
+        id: 'entry_1',
+        date: '2026年10月10日',
+        dayName: '土曜日',
+        system: 'BatoBucket',
+        ec: '2.2',
+        memo: '秋ナスの追肥完了。新芽が力強く展開中！写真をタップすると大画面で拡大できます。',
+        photos: ['https://images.unsplash.com/photo-1592417817098-8f3d6910985c?w=800']
+      },
+      {
+        id: 'entry_2',
+        date: '2026年10月08日',
+        dayName: '木曜日',
+        system: 'DWC / NFT',
+        ec: '1.6',
+        memo: 'サンチュと小松菜の収穫。右上の「✏️ 編集」ボタンからいつでも文章や写真を直せます。',
+        photos: ['https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800']
+      }
+    ];
+
+    let timelineEntries = [...sampleInitialEntries];
+    let dailyStatus = { bato: false, dwc: false, tower: false };
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.remove('opacity-0');
+      setTimeout(() => toast.classList.add('opacity-0'), 2500);
+    }
+
+    // 系統選択
+    function selectSystem(sysKey) {
+      currentSystem = sysKey;
+      ['bato', 'dwc', 'tower'].forEach(k => {
+        const btn = document.getElementById('tab-' + k);
+        if (k === sysKey) {
+          btn.className = 'py-2.5 px-2 rounded-xl text-center font-bold text-xs bg-emerald-600 text-white shadow-sm flex flex-col items-center justify-center transition';
+        } else {
+          btn.className = 'py-2.5 px-2 rounded-xl text-center font-bold text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 flex flex-col items-center justify-center transition';
+        }
+      });
+      updateDailyStatusBadges();
+    }
+
+    // 記録状況バッジの動的更新
+    function updateDailyStatusBadges() {
+      ['bato', 'dwc', 'tower'].forEach(k => {
+        const badge = document.getElementById('tab-' + k + '-status');
+        const isRecorded = dailyStatus[k];
+        const isSelected = (currentSystem === k);
+
+        if (isRecorded) {
+          badge.textContent = '✅ 本日記録済';
+          badge.className = isSelected
+            ? 'mt-1 bg-white/20 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold'
+            : 'mt-1 bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded-full font-bold';
+        } else {
+          badge.textContent = '⏳ 未記録';
+          badge.className = isSelected
+            ? 'mt-1 bg-white/20 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold opacity-80'
+            : 'mt-1 bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-bold';
+        }
+      });
+    }
+
+    function simulateSaveRecord() {
+      dailyStatus[currentSystem] = true;
+      updateDailyStatusBadges();
+      showToast(`✅ ${currentSystem.toUpperCase()} の記録を完了しました！`);
+    }
+
+    function resetDailyStatus() {
+      dailyStatus = { bato: false, dwc: false, tower: false };
+      updateDailyStatusBadges();
+      showToast('記録状況を未記録にリセットしました');
+    }
+
+    // タイムライン描画
+    function renderTimeline() {
+      const container = document.getElementById('timeline-feed-container');
+      container.innerHTML = '';
+      timelineEntries.forEach(entry => {
+        const article = document.createElement('article');
+        article.className = 'timeline-card bg-white p-4 rounded-2xl border shadow-sm space-y-2 relative transition';
+        
+        let photoHtml = '';
+        if (entry.photos && entry.photos.length > 0) {
+          photoHtml = `<div class="flex gap-2 pt-1 overflow-x-auto">` +
+            entry.photos.map(p => `<img src="${p}" onclick="openLightbox('${p}', '${entry.date} ${entry.system}')" class="w-16 h-16 rounded-xl object-cover border cursor-pointer hover:opacity-80 transition hover:scale-102">`).join('') +
+            `</div>`;
+        }
+
+        article.innerHTML = `
+          <div class="flex items-center justify-between border-b pb-2">
+            <div>
+              <h3 class="text-base font-black text-gray-900">${entry.date}</h3>
+              <span class="text-[11px] text-gray-500 font-semibold">${entry.dayName || ''}</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[11px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                ${entry.system} | EC: ${entry.ec}
+              </span>
+              <!-- ✏️ 編集ボタン -->
+              <button onclick="openEditorForEdit('${entry.id}')" class="btn-edit-journal text-xs bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-700 px-2 py-0.5 rounded-lg font-bold border transition" title="日記を編集">
+                ✏️ 編集
+              </button>
+            </div>
+          </div>
+          <p class="text-xs leading-relaxed text-gray-800 whitespace-pre-wrap">${entry.memo}</p>
+          ${photoHtml}
+        `;
+        container.appendChild(article);
+      });
+    }
+
+    // 写真大画面表示 (Lightbox)
+    function openLightbox(src, caption) {
+      document.getElementById('modal-img').src = src;
+      document.getElementById('modal-caption').textContent = caption || '写真プレビュー';
+      document.getElementById('photo-modal').classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+      document.getElementById('photo-modal').classList.add('hidden');
+    }
+
+    // エディタ操作（新規 / 編集）
+    function openEditorForNew() {
+      editingEntryId = null;
+      selectedPhotos = [];
+      document.getElementById('editor-modal-title').innerHTML = '<span>📅</span> 本日の栽培日誌';
+      document.getElementById('editor-textarea').value = '';
+      renderEditorThumbnails();
+      document.getElementById('journal-editor-modal').classList.remove('hidden');
+      document.getElementById('editor-textarea').focus();
+    }
+
+    function openEditorForEdit(entryId) {
+      const entry = timelineEntries.find(e => e.id === entryId);
+      if (!entry) return;
+      editingEntryId = entryId;
+      selectedPhotos = [...(entry.photos || [])];
+      document.getElementById('editor-modal-title').innerHTML = `<span>✏️</span> 日誌を編集 (${entry.date})`;
+      document.getElementById('editor-textarea').value = entry.memo;
+      renderEditorThumbnails();
+      document.getElementById('journal-editor-modal').classList.remove('hidden');
+      document.getElementById('editor-textarea').focus();
+    }
+
+    function closeJournalEditor() {
+      document.getElementById('journal-editor-modal').classList.add('hidden');
+    }
+
+    function renderEditorThumbnails() {
+      const tray = document.getElementById('editor-thumbnails');
+      tray.innerHTML = '';
+      selectedPhotos.forEach((src, idx) => {
+        const div = document.createElement('div');
+        div.className = 'relative w-16 h-16 rounded-xl overflow-hidden border flex-shrink-0';
+        div.innerHTML = `<img src="${src}" class="w-full h-full object-cover">
+          <button onclick="removePhoto(${idx})" class="absolute top-0.5 right-0.5 bg-black/70 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">✕</button>`;
+        tray.appendChild(div);
+      });
+      const addBtn = document.createElement('button');
+      addBtn.onclick = () => document.getElementById('input-gallery-pick').click();
+      addBtn.className = 'w-16 h-16 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 hover:text-sky-600 flex flex-col items-center justify-center flex-shrink-0';
+      addBtn.innerHTML = '<span class="text-xl font-bold">＋</span><span class="text-[9px]">追加</span>';
+      tray.appendChild(addBtn);
+    }
+
+    function removePhoto(idx) {
+      selectedPhotos.splice(idx, 1);
+      renderEditorThumbnails();
+    }
+
+    function handleFileSelect(input) {
+      if (!input.files || input.files.length === 0) return;
+      for (const file of Array.from(input.files)) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          selectedPhotos.push(e.target.result);
+          renderEditorThumbnails();
+        };
+        reader.readAsDataURL(file);
+      }
+      input.value = '';
+    }
+
+    function saveJournalEntry() {
+      const text = document.getElementById('editor-textarea').value.trim();
+      if (!text && selectedPhotos.length === 0) {
+        alert('メモまたは写真を入力してください');
+        return;
+      }
+
+      if (editingEntryId) {
+        // 既存記事の上書き更新
+        const entry = timelineEntries.find(e => e.id === editingEntryId);
+        if (entry) {
+          entry.memo = text;
+          entry.photos = [...selectedPhotos];
+          showToast('✅ 日誌を更新しました！');
+        }
+      } else {
+        // 新規作成
+        const newEntry = {
+          id: 'entry_' + Date.now(),
+          date: '2026年10月10日',
+          dayName: '土曜日',
+          system: currentSystem === 'bato' ? 'BatoBucket' : (currentSystem === 'dwc' ? 'DWC / NFT' : 'タワー型'),
+          ec: '2.0',
+          memo: text,
+          photos: [...selectedPhotos]
+        };
+        timelineEntries.unshift(newEntry);
+        dailyStatus[currentSystem] = true;
+        updateDailyStatusBadges();
+        showToast('✅ 新しい日誌を追加しました！');
+      }
+
+      closeJournalEditor();
+      renderTimeline();
+    }
+
+    // 初期化
+    selectSystem('bato');
+    renderTimeline();
+  </script>
+</body>
+</html>
