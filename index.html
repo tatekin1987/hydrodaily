@@ -643,10 +643,14 @@
 
   <!-- Client Logic -->
   <script>
-    const DEFAULT_GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwuuQOjC-t1wUgd8FKnkLlCsiL-T_LN1n6GTbSLUO_UV-274yNh0zNA8ICkniabzlfN/exec';
+    const DEFAULT_GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzHnbRYd8D5auR8GmDNNQAR9PiCKyxhVpFelbXPW4bJl9A6MmnasbcEPNCMqE_XgT_c/exec';
 
     function getGasEndpoint() {
-      const saved = localStorage.getItem('hydro_gas_endpoint');
+      let saved = localStorage.getItem('hydro_gas_endpoint');
+      if (saved && saved.includes('AKfycbwuuQOjC')) {
+        localStorage.removeItem('hydro_gas_endpoint');
+        saved = null;
+      }
       if (saved) return saved;
       if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
         return '/dummy-gas-endpoint';
@@ -1213,11 +1217,21 @@
           `</div>`;
       }
 
+      let displayDate = entry.date || '';
+      let displayDay = entry.dayName || '';
+      if (displayDate && !displayDate.includes('年')) {
+        const d = new Date(entry.timestamp || displayDate);
+        if (!isNaN(d.getTime())) {
+          displayDate = d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+          if (!displayDay) displayDay = d.toLocaleDateString('ja-JP', { weekday: 'long' });
+        }
+      }
+
       article.innerHTML = `
         <div class="flex items-center justify-between border-b pb-2">
           <div>
-            <h3 class="text-xl font-black text-gray-900">${entry.date}</h3>
-            <span class="text-xs text-gray-500 font-semibold">${entry.dayName || ''}</span>
+            <h3 class="text-xl font-black text-gray-900">${displayDate}</h3>
+            <span class="text-xs text-gray-500 font-semibold">${displayDay}</span>
           </div>
           <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
             ${entry.system || '水耕日誌'} | EC: ${entry.ec || '-'}
