@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HydroDaily - 10年日記・年次比較ダッシュボード</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-900 text-slate-100 pb-16">
+
+  <!-- ヘッダー -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3">
+    <div class="max-w-4xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🌿</span>
+        <div>
+          <h1 id="dashboard-title" class="text-lg font-bold text-white flex items-center space-x-2">
+            <span>HydroDaily 10年日記</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-normal">年次比較</span>
+          </h1>
+          <p class="text-xs text-slate-400">同月同日の成長記録をマルチイヤー比較</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <!-- クラウド同期ボタン -->
+        <button id="btn-sync-cloud" onclick="syncFromGas()" class="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 text-xs font-medium border border-slate-700 transition">
+          <span id="sync-spinner" class="inline-block">🔄</span>
+          <span class="hidden sm:inline">同期</span>
+        </button>
+        <!-- 現場入力への相互直結ボタン -->
+        <a id="btn-back-to-input" href="index.html" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white text-xs font-bold shadow-md transition">
+          <span>📱</span>
+          <span>現場入力へ</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-4 space-y-4">
+
+    <!-- コントロールバー（系統選択 ＆ 日付ナビ） -->
+    <div class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/80 shadow-lg space-y-3">
+      <!-- 系統セレクター -->
+      <div class="flex items-center justify-between">
+        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">栽培系統</label>
+        <span id="system-detail" class="text-xs text-emerald-400 font-medium">BatoBucket (94L固定)</span>
+      </div>
+      <div class="grid grid-cols-3 gap-2" id="system-tabs">
+        <button data-system="BatoBucket" class="system-tab-btn py-2.5 px-3 rounded-xl font-bold text-xs flex flex-col items-center justify-center border transition bg-emerald-600 text-white border-emerald-500 shadow-md">
+          <span class="text-base mb-0.5">🍓</span>
+          <span>BatoBucket</span>
+        </button>
+        <button data-system="DWC" class="system-tab-btn py-2.5 px-3 rounded-xl font-bold text-xs flex flex-col items-center justify-center border transition bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700">
+          <span class="text-base mb-0.5">🥬</span>
+          <span>DWC</span>
+        </button>
+        <button data-system="Tower" class="system-tab-btn py-2.5 px-3 rounded-xl font-bold text-xs flex flex-col items-center justify-center border transition bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700">
+          <span class="text-base mb-0.5">🗼</span>
+          <span>タワー</span>
+        </button>
+      </div>
+
+      <!-- 日付ナビゲーション -->
+      <div class="pt-2 border-t border-slate-700/60 flex items-center justify-between">
+        <button id="btn-prev-day" class="p-2 rounded-xl bg-slate-700 hover:bg-slate-600 active:scale-95 text-slate-300 text-xs font-bold flex items-center space-x-1 transition">
+          <span>◀</span>
+          <span class="hidden sm:inline">前の日</span>
+        </button>
+
+        <div class="flex items-center space-x-2">
+          <input type="date" id="target-date-picker" class="bg-slate-900 border border-slate-600 rounded-xl px-3 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-emerald-500">
+          <button id="btn-today" class="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 text-xs font-bold transition">今日</button>
+        </div>
+
+        <button id="btn-next-day" class="p-2 rounded-xl bg-slate-700 hover:bg-slate-600 active:scale-95 text-slate-300 text-xs font-bold flex items-center space-x-1 transition">
+          <span class="hidden sm:inline">次の日</span>
+          <span>▶</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 10年日記 年次別スタック表示コンテナ -->
+    <div id="stacked-comparison-container" class="space-y-4">
+      <!-- JavaScriptで動的生成されるカード群 -->
+    </div>
+
+  </main>
+
+  <!-- 写真Lightbox拡大モーダル -->
+  <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
+      <button id="lightbox-close" class="absolute -top-12 right-0 p-2 text-white/80 hover:text-white text-2xl font-bold transition">✕</button>
+      <img id="lightbox-img" src="" alt="拡大写真" class="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl">
+      <div id="lightbox-caption" class="mt-3 text-center text-sm text-slate-300"></div>
+    </div>
+  </div>
+
+  <script>
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzHnbRYd8D5auR8GmDNNQAR9PiCKyxhVpFelbXPW4bJl9A6MmnasbcEPNCMqE_XgT_c/exec";
+
+    let currentSystem = "BatoBucket";
+    // デフォルト日付: 今日の日付 YYYY-MM-DD
+    const today = new Date();
+    let selectedDateStr = today.toISOString().split("T")[0];
+
+    // 初期化
+    const datePicker = document.getElementById("target-date-picker");
+    datePicker.value = selectedDateStr;
+
+    function getEntries() {
+      try {
+        const blacklist = JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]');
+        const stored = localStorage.getItem('hydro_timeline_entries');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(e => !blacklist.includes(e.id));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load entries from localStorage", e);
+      }
+      return [];
+    }
+
+    function renderComparison() {
+      const container = document.getElementById("stacked-comparison-container");
+      container.innerHTML = "";
+
+      const entries = getEntries();
+      const [selYear, selMonth, selDay] = selectedDateStr.split("-").map(Number);
+
+      // 表示対象年（選択年〜過去3年分、最低でも過去1年分は必ず比較枠を表示）
+      const years = [selYear, selYear - 1, selYear - 2];
+
+      years.forEach(year => {
+        // 同系統の全ログ
+        const systemEntries = entries.filter(e => {
+          if (!e.system) return false;
+          const s = e.system.toLowerCase();
+          const target = currentSystem.toLowerCase();
+          return s.includes(target) || (target === "tower" && s.includes("タワー"));
+        });
+
+        // 該当日付（同月同日）完全一致を探す
+        let match = null;
+        let isProximity = false;
+        let proximityDays = 0;
+
+        // まず完全一致
+        match = systemEntries.find(e => {
+          const d = parseEntryDate(e);
+          return d && d.getFullYear() === year && (d.getMonth() + 1) === selMonth && d.getDate() === selDay;
+        });
+
+        // 完全一致がない場合、前後±7日以内のスマート近似マッチング
+        if (!match) {
+          const targetTs = new Date(year, selMonth - 1, selDay).getTime();
+          let minDiff = Infinity;
+          let bestEntry = null;
+
+          systemEntries.forEach(e => {
+            const d = parseEntryDate(e);
+            if (d && d.getFullYear() === year) {
+              const diffDays = Math.round(Math.abs(d.getTime() - targetTs) / (1000 * 60 * 60 * 24));
+              if (diffDays <= 7 && diffDays < minDiff) {
+                minDiff = diffDays;
+                bestEntry = e;
+              }
+            }
+          });
+
+          if (bestEntry) {
+            match = bestEntry;
+            isProximity = true;
+            const matchDate = parseEntryDate(match);
+            proximityDays = Math.round((matchDate.getTime() - targetTs) / (1000 * 60 * 60 * 24));
+          }
+        }
+
+        // カード描画
+        const card = document.createElement("div");
+        card.className = "comparison-year-card bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-md transition hover:border-slate-600";
+
+        if (match) {
+          const isCurrentYear = year === selYear;
+          const badgeText = isCurrentYear ? "本年 (Current)" : `${selYear - year}年前`;
+          const badgeColor = isCurrentYear ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-blue-500/20 text-blue-400 border-blue-500/30";
+
+          let proximityHtml = "";
+          if (isProximity) {
+            const label = proximityDays > 0 ? `${proximityDays}日後` : `${Math.abs(proximityDays)}日前`;
+            proximityHtml = `<span class="proximity-badge text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-medium">📅 ${match.date} (${label})</span>`;
+          }
+
+          let photosHtml = "";
+          if (match.photos && match.photos.length > 0) {
+            photosHtml = `
+              <div class="flex gap-2 overflow-x-auto py-2">
+                ${match.photos.map(p => `
+                  <img src="${p}" loading="lazy" class="comparison-photo-thumb w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-xl border border-slate-700 cursor-pointer hover:opacity-90 active:scale-95 transition" onclick="openLightbox('${p}', '${year}年 ${match.system}')">
+                `).join("")}
+              </div>
+            `;
+          }
+
+          card.innerHTML = `
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+                <span class="text-lg font-bold text-white">${year}年 (${selMonth}月${selDay}日)</span>
+                <span class="text-xs px-2.5 py-0.5 rounded-full border font-bold ${badgeColor}">${badgeText}</span>
+                ${proximityHtml}
+              </div>
+              <div class="text-xs text-slate-400">${match.dayName || ""}</div>
+            </div>
+
+            <!-- 水質・ECステータス -->
+            <div class="flex items-center space-x-4 mb-3 p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/50 text-xs">
+              <div><span class="text-slate-400">EC:</span> <span class="font-bold text-emerald-400 text-sm">${match.ec || "-"}</span> mS/cm</div>
+              ${match.ph ? `<div><span class="text-slate-400">pH:</span> <span class="font-bold text-blue-400 text-sm">${match.ph}</span></div>` : ""}
+              ${match.waterTemp ? `<div><span class="text-slate-400">水温:</span> <span class="font-bold text-amber-400 text-sm">${match.waterTemp}</span> ℃</div>` : ""}
+            </div>
+
+            <!-- 写真ギャラリー -->
+            ${photosHtml}
+
+            <!-- 観察メモ -->
+            <div class="mt-2 text-sm text-slate-200 bg-slate-900/30 p-3 rounded-xl border border-slate-800 leading-relaxed whitespace-pre-wrap">
+              ${match.memo || "メモなし"}
+            </div>
+          `;
+        } else {
+          // Empty State
+          card.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-lg font-bold text-slate-500">${year}年 (${selMonth}月${selDay}日)</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400 font-medium">${selYear - year}年前</span>
+            </div>
+            <div class="p-6 text-center text-slate-500 bg-slate-900/40 rounded-xl border border-dashed border-slate-800">
+              <span class="text-2xl mb-1 block">🌱</span>
+              <p class="text-xs">この時期（±7日間）の記録はありません</p>
+            </div>
+          `;
+        }
+
+        container.appendChild(card);
+      });
+    }
+
+    function parseEntryDate(entry) {
+      if (entry.timestamp) {
+        const d = new Date(entry.timestamp);
+        if (!isNaN(d.getTime())) return d;
+      }
+      if (entry.date) {
+        // "2026年10月10日" 等のパース
+        const m = entry.date.match(/(\d{4})[年\/-](\d{1,2})[月\/-](\d{1,2})/);
+        if (m) {
+          return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+        }
+      }
+      return null;
+    }
+
+    // Lightbox
+    window.openLightbox = function(url, caption) {
+      document.getElementById("lightbox-img").src = url;
+      document.getElementById("lightbox-caption").textContent = caption;
+      document.getElementById("lightbox-modal").classList.remove("hidden");
+    };
+
+    document.getElementById("lightbox-close").addEventListener("click", () => {
+      document.getElementById("lightbox-modal").classList.add("hidden");
+    });
+    document.getElementById("lightbox-modal").addEventListener("click", (e) => {
+      if (e.target.id === "lightbox-modal") {
+        document.getElementById("lightbox-modal").classList.add("hidden");
+      }
+    });
+
+    // 系統切り替え
+    document.querySelectorAll(".system-tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".system-tab-btn").forEach(b => {
+          b.className = "system-tab-btn py-2.5 px-3 rounded-xl font-bold text-xs flex flex-col items-center justify-center border transition bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700";
+        });
+        btn.className = "system-tab-btn py-2.5 px-3 rounded-xl font-bold text-xs flex flex-col items-center justify-center border transition bg-emerald-600 text-white border-emerald-500 shadow-md";
+        currentSystem = btn.getAttribute("data-system");
+        document.getElementById("system-detail").textContent = currentSystem === "BatoBucket" ? "BatoBucket (94L固定)" : currentSystem === "DWC" ? "DWC (140L固定)" : "タワー型 (19L固定)";
+        renderComparison();
+      });
+    });
+
+    // 日付操作
+    datePicker.addEventListener("change", (e) => {
+      selectedDateStr = e.target.value;
+      renderComparison();
+    });
+
+    document.getElementById("btn-prev-day").addEventListener("click", () => {
+      const d = new Date(selectedDateStr);
+      d.setDate(d.getDate() - 1);
+      selectedDateStr = d.toISOString().split("T")[0];
+      datePicker.value = selectedDateStr;
+      renderComparison();
+    });
+
+    document.getElementById("btn-next-day").addEventListener("click", () => {
+      const d = new Date(selectedDateStr);
+      d.setDate(d.getDate() + 1);
+      selectedDateStr = d.toISOString().split("T")[0];
+      datePicker.value = selectedDateStr;
+      renderComparison();
+    });
+
+    document.getElementById("btn-today").addEventListener("click", () => {
+      const d = new Date();
+      selectedDateStr = d.toISOString().split("T")[0];
+      datePicker.value = selectedDateStr;
+      renderComparison();
+    });
+
+    // GAS クラウド同期
+    window.syncFromGas = async function() {
+      const spinner = document.getElementById("sync-spinner");
+      spinner.classList.add("animate-spin");
+      try {
+        const res = await fetch(`${GAS_WEB_APP_URL}?action=get_timeline`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.status === "success" && Array.isArray(data.entries)) {
+            const blacklist = JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]');
+            const local = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
+            const map = new Map();
+            local.forEach(e => map.set(e.id, e));
+            data.entries.forEach(e => {
+              if (!blacklist.includes(e.id)) {
+                map.set(e.id, e);
+              }
+            });
+            const merged = Array.from(map.values()).sort((a,b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
+            localStorage.setItem('hydro_timeline_entries', JSON.stringify(merged));
+            renderComparison();
+          }
+        }
+      } catch (err) {
+        console.warn("Cloud sync error:", err);
+      } finally {
+        spinner.classList.remove("animate-spin");
+      }
+    };
+
+    // 初期描画 ＆ バックグラウンド同期
+    renderComparison();
+    syncFromGas();
+  </script>
+</body>
+</html>
