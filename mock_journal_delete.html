@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>【UIモック】HydroDaily 日誌削除 ＆ 誤操作防止プロトタイプ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes fadeOutDown {
+      from { opacity: 1; transform: scale(1); max-height: 200px; margin-bottom: 1rem; }
+      to { opacity: 0; transform: scale(0.95); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+    }
+    .card-deleting {
+      animation: fadeOutDown 0.3s ease-out forwards;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans pb-24 antialiased">
+
+  <!-- ヘッダー -->
+  <header class="bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b border-slate-100 shadow-sm">
+    <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🌱</span>
+        <div>
+          <h1 class="text-base font-black tracking-tight text-slate-900 leading-none">HydroDaily</h1>
+          <p class="text-[10px] text-slate-400 font-medium">日誌削除プロトタイプ (UI Mock)</p>
+        </div>
+      </div>
+      <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+        モック動作中
+      </span>
+    </div>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main class="max-w-lg mx-auto px-4 pt-4 space-y-4">
+
+    <!-- 系統セレクターステータス表示 -->
+    <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-bold text-slate-700">BatoBucket系統</span>
+        <span id="mock-system-badge" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+          ✅ 本日記録済
+        </span>
+      </div>
+      <button onclick="openEditorModal(null)" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl shadow-sm transition">
+        ✏️ 新規日誌
+      </button>
+    </div>
+
+    <!-- タイムライン見出し -->
+    <div class="flex items-center justify-between pt-1">
+      <h2 class="text-sm font-black text-slate-800 flex items-center gap-1.5">
+        <span>📖</span> タイムライン日誌
+      </h2>
+      <span class="text-xs text-slate-500 font-semibold" id="entry-count-label">全 2 件</span>
+    </div>
+
+    <!-- タイムラインリスト -->
+    <div id="timeline-container" class="space-y-3">
+
+      <!-- カード 1 -->
+      <article id="card-entry_01" class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2.5 transition-all">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div>
+            <h3 class="text-base font-black text-slate-900">2026年10月10日</h3>
+            <span class="text-[11px] text-slate-500 font-medium">土曜日</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[11px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+              BatoBucket | EC: 2.1
+            </span>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-start gap-2">
+          <p class="text-xs leading-relaxed text-slate-700 whitespace-pre-wrap flex-1">
+            本日の朝、第3花房が開花。液肥は満水給水完了。新芽の成長が順調です。
+          </p>
+          
+          <!-- アクションボタングループ（編集 ＆ 削除） -->
+          <div class="flex items-center gap-1 shrink-0 pt-0.5">
+            <button onclick="openEditorModal('entry_01')" title="編集" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button onclick="deleteEntry('entry_01')" title="削除" class="btn-delete-journal p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <!-- カード 2 -->
+      <article id="card-entry_02" class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2.5 transition-all">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div>
+            <h3 class="text-base font-black text-slate-900">2026年10月09日</h3>
+            <span class="text-[11px] text-slate-500 font-medium">金曜日</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[11px] bg-sky-50 text-sky-700 font-bold px-2 py-0.5 rounded-full border border-sky-200">
+              DWC | EC: 1.8
+            </span>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-start gap-2">
+          <p class="text-xs leading-relaxed text-slate-700 whitespace-pre-wrap flex-1">
+            根の張りを点検。水温21℃、白く健康的な根毛を確認。
+          </p>
+          
+          <div class="flex items-center gap-1 shrink-0 pt-0.5">
+            <button onclick="openEditorModal('entry_02')" title="編集" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button onclick="deleteEntry('entry_02')" title="削除" class="btn-delete-journal p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </main>
+
+  <!-- 編集・新規モーダル -->
+  <div id="journal-editor-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 id="modal-title" class="font-black text-slate-800 text-base">✏️ 日誌を編集</h3>
+        <button onclick="closeEditorModal()" class="text-slate-400 hover:text-slate-600 p-1">✕</button>
+      </div>
+
+      <textarea id="modal-textarea" rows="4" class="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="栽培メモを入力..."></textarea>
+
+      <!-- ボタン群 -->
+      <div class="flex items-center justify-between pt-2">
+        <!-- 削除ボタン（既存編集時のみ表示） -->
+        <button id="btn-modal-delete" onclick="deleteFromModal()" class="flex items-center gap-1 px-3 py-2 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          この日誌を削除
+        </button>
+
+        <div class="flex items-center gap-2 ml-auto">
+          <button onclick="closeEditorModal()" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+            キャンセル
+          </button>
+          <button onclick="saveFromModal()" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition">
+            保存する
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50"></div>
+
+  <script>
+    let currentEditId = null;
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    function openEditorModal(entryId) {
+      currentEditId = entryId;
+      const modal = document.getElementById('journal-editor-modal');
+      const title = document.getElementById('modal-title');
+      const deleteBtn = document.getElementById('btn-modal-delete');
+      const textarea = document.getElementById('modal-textarea');
+
+      if (entryId) {
+        title.innerText = '✏️ 日誌を編集';
+        deleteBtn.classList.remove('hidden');
+        textarea.value = entryId === 'entry_01' 
+          ? '本日の朝、第3花房が開花。液肥は満水給水完了。新芽の成長が順調です。' 
+          : '根の張りを点検。水温21℃、白く健康的な根毛を確認。';
+      } else {
+        title.innerText = '🌱 新規日誌を書く';
+        deleteBtn.classList.add('hidden');
+        textarea.value = '';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeEditorModal() {
+      document.getElementById('journal-editor-modal').classList.add('hidden');
+    }
+
+    function deleteEntry(entryId) {
+      if (!confirm('この日誌を削除しますか？\n（写真やメモが完全に削除されます）')) {
+        return;
+      }
+
+      const card = document.getElementById('card-' + entryId);
+      if (card) {
+        card.classList.add('card-deleting');
+        setTimeout(() => {
+          card.remove();
+          updateCounts();
+          showToast('🗑️ 日誌を削除しました');
+        }, 300);
+      }
+
+      // もし本日の日誌が消えた場合、バッジを「未記録」に戻す
+      if (entryId === 'entry_01') {
+        const badge = document.getElementById('mock-system-badge');
+        badge.className = 'text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200';
+        badge.innerText = '⏳ 未記録';
+      }
+    }
+
+    function deleteFromModal() {
+      if (currentEditId) {
+        closeEditorModal();
+        deleteEntry(currentEditId);
+      }
+    }
+
+    function saveFromModal() {
+      closeEditorModal();
+      showToast('✅ 日誌を保存しました');
+    }
+
+    function updateCounts() {
+      const remaining = document.querySelectorAll('#timeline-container article').length;
+      document.getElementById('entry-count-label').innerText = `全 ${remaining} 件`;
+    }
+  </script>
+</body>
+</html>
