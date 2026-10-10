@@ -576,7 +576,15 @@
       <div class="text-sm font-bold text-gray-800 flex items-center gap-1">
         <span>📅</span> 本日の栽培日誌
       </div>
-      <button id="btn-save-journal" onclick="saveJournalEntry()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black rounded-full shadow-sm transition">保存</button>
+      <div class="flex items-center gap-2">
+        <button id="btn-delete-from-editor" onclick="deleteFromEditorModal()" class="hidden px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-full transition flex items-center gap-1 border border-rose-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          <span>削除</span>
+        </button>
+        <button id="btn-save-journal" onclick="saveJournalEntry()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black rounded-full shadow-sm transition">保存</button>
+      </div>
     </div>
     <div class="flex-1 p-4 overflow-y-auto">
       <textarea id="editor-textarea" rows="10" placeholder="本日の水耕の状況、気づき、収穫、追肥の様子を入力してください..." class="w-full h-full text-base leading-relaxed text-gray-800 outline-none resize-none bg-transparent placeholder-gray-400"></textarea>
@@ -1040,14 +1048,28 @@
       triggerGalleryPick();
     }
 
-    function openEditorWithText() {
+    function openJournalEditor() {
+      delete document.getElementById('journal-editor-modal').dataset.editId;
+      const delBtn = document.getElementById('btn-delete-from-editor');
+      if (delBtn) delBtn.classList.add('hidden');
       selectedPhotos = [];
       renderEditorThumbnails();
+      document.getElementById('editor-textarea').value = '';
+      if (document.getElementById('editor-char-count')) {
+        document.getElementById('editor-char-count').innerText = '0文字';
+      }
       document.getElementById('journal-editor-modal').classList.remove('hidden');
       document.getElementById('editor-textarea').focus();
     }
 
+    function openEditorWithText() {
+      openJournalEditor();
+    }
+
     function closeJournalEditor() {
+      delete document.getElementById('journal-editor-modal').dataset.editId;
+      const delBtn = document.getElementById('btn-delete-from-editor');
+      if (delBtn) delBtn.classList.add('hidden');
       document.getElementById('journal-editor-modal').classList.add('hidden');
     }
 
@@ -1063,6 +1085,10 @@
 
       // エディタを開いてサムネイルを描画
       renderEditorThumbnails();
+      const delBtn = document.getElementById('btn-delete-from-editor');
+      if (!document.getElementById('journal-editor-modal').dataset.editId && delBtn) {
+        delBtn.classList.add('hidden');
+      }
       document.getElementById('journal-editor-modal').classList.remove('hidden');
       document.getElementById('editor-textarea').focus();
     }
@@ -1139,33 +1165,50 @@
         : 'BatoBucket';
       const currentEc = document.getElementById('input-current-ec')?.value || '2.0';
 
-      const newEntry = editId ? 
-        { ...(JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]').find(e => e.id === editId) || {}), 
+      let stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
+      let newEntry;
+
+      if (editId) {
+        const existingIdx = stored.findIndex(e => e.id === editId);
+        const existing = existingIdx >= 0 ? stored[existingIdx] : {};
+        newEntry = {
+          ...existing,
           memo: text,
           photos: [...selectedPhotos],
           timestamp: new Date().toISOString()
-        } : {
-        id: 'entry_' + Date.now(),
-        date: new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }),
-        dayName: new Date().toLocaleDateString('ja-JP', { weekday: 'long' }),
-        system: sysName,
-        ec: currentEc,
-        memo: text,
-        photos: [...selectedPhotos],
-        timestamp: new Date().toISOString()
-      };
+        };
+        if (existingIdx >= 0) {
+          stored[existingIdx] = newEntry;
+        } else {
+          stored.unshift(newEntry);
+        }
+      } else {
+        newEntry = {
+          id: 'entry_' + Date.now(),
+          date: new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }),
+          dayName: new Date().toLocaleDateString('ja-JP', { weekday: 'long' }),
+          system: sysName,
+          ec: currentEc,
+          memo: text,
+          photos: [...selectedPhotos],
+          timestamp: new Date().toISOString()
+        };
+        stored.unshift(newEntry);
+      }
 
       // 1. LocalStorageに保存
       try {
-        const stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
-        stored.unshift(newEntry);
         localStorage.setItem('hydro_timeline_entries', JSON.stringify(stored));
       } catch (e) {
         console.warn('LocalStorage save error:', e);
       }
 
-      // 2. タイムライン先頭へ即座に描画
-      prependTimelineCard(newEntry, true);
+      // 2. タイムライン再描画または先頭追加
+      if (editId) {
+        renderSavedTimelineEntries(stored);
+      } else {
+        prependTimelineCard(newEntry, true);
+      }
 
       // 3. GAS URL連携時は非同期バックグラウンド送信
       const gasUrl = (typeof getGasEndpoint === 'function') ? getGasEndpoint() : null;
@@ -1201,6 +1244,71 @@
       document.getElementById('editor-textarea').value = '';
       selectedPhotos = [];
       switchTab('timeline');
+    }
+
+    function deleteFromEditorModal() {
+      const editId = document.getElementById('journal-editor-modal').dataset.editId;
+      if (!editId) return;
+      closeJournalEditor();
+      deleteJournalEntry(editId);
+    }
+
+    function deleteJournalEntry(entryId) {
+      if (!entryId) return;
+      const ok = window.confirm('この日誌を削除しますか？\n（写真やメモが完全に削除されます）');
+      if (!ok) return;
+
+      // 1. LocalStorage ('hydro_timeline_entries') から該当IDのエントリを削除
+      let stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
+      const targetEntry = stored.find(e => e.id === entryId);
+      stored = stored.filter(e => e.id !== entryId);
+      localStorage.setItem('hydro_timeline_entries', JSON.stringify(stored));
+
+      // 2. ゾンビ復活防止: LocalStorage ('hydro_deleted_journal_ids') に entryId を追加保存
+      let deletedIds = JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]');
+      if (!deletedIds.includes(entryId)) {
+        deletedIds.push(entryId);
+        localStorage.setItem('hydro_deleted_journal_ids', JSON.stringify(deletedIds));
+      }
+
+      // 3. DOMから該当カードを即座に削除
+      const card = document.querySelector(`article[data-entry-id="${entryId}"]`);
+      if (card) {
+        card.remove();
+      }
+
+      // 4. 本日の日誌ステータスの再判定
+      const todayDateStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+      const todayRemainingForCurrentSys = stored.filter(e => {
+        const eDate = e.date || '';
+        return eDate === todayDateStr && (!targetEntry || e.system === targetEntry.system);
+      });
+      if (todayRemainingForCurrentSys.length === 0 && targetEntry && targetEntry.system) {
+        const sysKey = Object.keys(SYSTEM_CONFIG).find(k => SYSTEM_CONFIG[k].name === targetEntry.system);
+        if (sysKey) {
+          const todayKey = getTodayKey();
+          const status = JSON.parse(localStorage.getItem(todayKey) || '{}');
+          delete status[sysKey];
+          localStorage.setItem(todayKey, JSON.stringify(status));
+          updateDailyStatusBadges();
+        }
+      }
+
+      // 5. GASエンドポイントへの非同期削除送信
+      const gasUrl = (typeof getGasEndpoint === 'function') ? getGasEndpoint() : null;
+      if (gasUrl) {
+        fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'delete_journal',
+            id: entryId
+          })
+        }).catch(err => console.warn('Background delete failed:', err));
+      }
+
+      showToast('🗑️ 日誌を削除しました');
     }
 
     function prependTimelineCard(entry, isPrepend) {
@@ -1239,11 +1347,18 @@
         </div>
         <div class="flex justify-between items-center pt-1">
           <p class="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap flex-1">${entry.memo || ''}</p>
-          <button onclick="openEditorForEdit('${entry.id}')" class="btn-edit-journal ml-2 p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-gray-100 rounded-full transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
+          <div class="flex items-center ml-2">
+            <button onclick="openEditorForEdit('${entry.id}')" class="btn-edit-journal p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-gray-100 rounded-full transition" title="編集">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button onclick="deleteJournalEntry('${entry.id}')" data-entry-id="${entry.id}" class="btn-delete-journal ml-1 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition" title="削除">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
         </div>
         ${photoHtml}
       `;
@@ -1262,7 +1377,9 @@
         const existingDynamic = container.querySelectorAll('.dynamic-timeline-card');
         existingDynamic.forEach(el => el.remove());
 
-        const stored = entries || JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
+        const deletedIds = new Set(JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]'));
+        let stored = entries || JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
+        stored = stored.filter(e => !deletedIds.has(e.id));
         if (Array.isArray(stored) && stored.length > 0) {
           for (let i = stored.length - 1; i >= 0; i--) {
             prependTimelineCard(stored[i], true);
@@ -1295,16 +1412,19 @@
 
         if (data && data.status === 'success' && Array.isArray(data.entries)) {
           const localEntries = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
+          const deletedIds = new Set(JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]'));
           const entryMap = new Map();
 
-          // ローカルの未送信データを保護
+          // ローカルの未送信データを保護（削除済みIDは除外）
           localEntries.forEach(entry => {
-            if (entry && entry.id) entryMap.set(entry.id, entry);
+            if (entry && entry.id && !deletedIds.has(entry.id)) {
+              entryMap.set(entry.id, entry);
+            }
           });
 
-          // クラウドのデータで更新
+          // クラウドのデータで更新（削除済みIDはゾンビ復活防止のためスキップ）
           data.entries.forEach(entry => {
-            if (entry && entry.id) {
+            if (entry && entry.id && !deletedIds.has(entry.id)) {
               entryMap.set(entry.id, {
                 ...entry,
                 photos: Array.isArray(entry.photos) ? entry.photos : []
@@ -1377,8 +1497,10 @@
         selectedPhotos = [...(entry.photos || [])];
         renderEditorThumbnails();
         
-        // Save the entry ID for update
+        // Save the entry ID for update & show editor delete button
         document.getElementById('journal-editor-modal').dataset.editId = entryId;
+        const delBtn = document.getElementById('btn-delete-from-editor');
+        if (delBtn) delBtn.classList.remove('hidden');
         document.getElementById('journal-editor-modal').classList.remove('hidden');
       }
     }

@@ -1,7 +1,7 @@
 /**
  * HydroDaily Google Apps Script Backend (Standalone & Bound Compatible)
  * 
- * - doPost: 栽培ログ(save_log) または タイムライン日誌(journal)の記録 & 写真のGoogle Drive保存
+ * - doPost: 栽培ログ(save_log)、タイムライン日誌(journal)、日誌削除(delete_journal) & 写真のGoogle Drive保存
  * - doGet: 過去の10年日記(get_diary) または 全タイムライン日誌(get_timeline)の抽出・返却
  */
 
@@ -94,7 +94,32 @@ function doPost(e) {
       });
     }
 
-    // 2. 液肥計算ログの保存 (action: save_log)
+    // 2. タイムライン日誌の削除 (action: delete_journal)
+    if (data.action === 'delete_journal') {
+      const ss = getOrCreateSpreadsheet();
+      const sheet = ss.getSheetByName(JOURNAL_SHEET_NAME);
+      if (!sheet || sheet.getLastRow() <= 1) {
+        return responseJson({ status: 'success', deleted: false, message: 'Sheet empty' });
+      }
+
+      const rows = sheet.getDataRange().getValues();
+      let targetRowIndex = -1;
+      for (let i = 1; i < rows.length; i++) {
+        if (String(rows[i][0]) === String(data.id)) {
+          targetRowIndex = i + 1; // 1-indexed row number
+          break;
+        }
+      }
+
+      if (targetRowIndex > 0) {
+        sheet.deleteRow(targetRowIndex);
+        return responseJson({ status: 'success', deleted: true, id: data.id });
+      }
+
+      return responseJson({ status: 'success', deleted: false, message: 'Entry not found' });
+    }
+
+    // 3. 液肥計算ログの保存 (action: save_log)
     if (data.action === 'save_log') {
       const ss = getOrCreateSpreadsheet();
       let sheet = ss.getSheetByName(SHEET_NAME);
