@@ -1,8 +1,8 @@
 # 🔄 HANDOFF.md - HydroDaily コンテキスト引き継ぎ書
 
 - **プロジェクト名**: HydroDaily (水耕栽培日誌・液肥電卓 PWA)
-- **最終更新日時**: 2026-10-10 08:55 (JST)
-- **現行バージョン**: v1.7 (PCとスマホのタイムライン完全同期・GitHub Pagesデプロイ完了)
+- **最終更新日時**: 2026-10-10 09:52 (JST)
+- **現行バージョン**: v1.7.1 (本番新GAS Web App完全開通・GitHub Pagesデプロイ完了)
 
 ---
 
@@ -11,6 +11,7 @@
 - **GitHubリモート**: `https://github.com/tatekin1987/hydrodaily.git` (ブランチ: `main`)
 - **Google Drive同期先**: `G:\マイドライブ\Antigravity_Inbox`
 - **本番スプレッドシート**: `G:\マイドライブ\HydroDaily_栽培ログ.gsheet`
+- **本番GAS Web App URL**: `https://script.google.com/macros/s/AKfycbzHnbRYd8D5auR8GmDNNQAR9PiCKyxhVpFelbXPW4bJl9A6MmnasbcEPNCMqE_XgT_c/exec`
 
 ---
 
@@ -32,15 +33,15 @@
    - BatoBucketが最初から「本日記録済」と固定されていたハードコードを完全撤廃。
    - 本日（YYYY-MM-DD）に実際に保存が行われた系統のみ「✅ 本日記録済」（緑バッジ）、未保存は「⏳ 未記録」（アンバーバッジ）に動的切り替え。
    - 日付跨ぎで自動リセットされるKISS構造。
-5. **PCとスマホのタイムライン完全同期 ＆ Google Drive画像表示 (v1.7 新機能)**:
-   - GASバックエンド（`gas/Code.gs`）に日誌専用シート `journal_logs` 自動生成と `action: journal` / `action: get_timeline` エンドポイントを実装。
-   - Drive保存写真から `https://lh3.googleusercontent.com/d/{fileId}` 高速ダイレクトリンクを生成し、PC・スマホ双方でCORSエラーなく即座に写真表示＆Lightbox連動。
-   - タイムライン上部に「🔄 クラウド同期」ボタンと同期ステータスバッジ（`#timeline-sync-status`）を新設。
-   - 起動時のサイレント自動同期、およびID重複排除マージにより、オフライン未送信データを保護しつつクラウド日誌を完全同期。
+5. **PCとスマホのタイムライン完全同期 ＆ Google Drive画像表示 (v1.7.1 開通確認完了)**:
+   - スプレッドシート直結の最新GAS Web Appが正常開通（`HTTP 200 / success` 確認済み）。
+   - 自動生成された `journal_logs` シートへの日誌追記および `action=get_timeline` による全件JSON取得を確認。
+   - `index.html` の `DEFAULT_GAS_ENDPOINT` を新URLへ完全更新し、古いURLのLocalStorage自動マイグレーションを追加。
+   - 生の日付型がスプレッドシートから返された場合の自動日本語フォーマット整形ガードを実装。
 6. **全21件のE2Eテスト完全合格（デグレゼロ）**:
    - `tests/test_all_e2e.py` により、既存機能18件＋同期新機能3件（`test_timeline_sync_e2e.py`）の全21テストがオールGreen。
-7. **Service Worker v1.7 キャッシュバスター更新**:
-   - `sw.js`（`hydrodaily-v1.7.0`）
+7. **Service Worker v1.7.1 キャッシュバスター更新**:
+   - `sw.js`（`hydrodaily-v1.7.1`）
 
 ---
 
@@ -56,9 +57,9 @@
 ---
 
 ## 📄 4. 変更・作成されたファイル一覧
-- [index.html](file:///C:/Users/admin/.gemini/antigravity/scratch/hydrodaily/index.html): 本番フロントエンド（v1.7対応、クラウド同期バー、ID重複排除マージ、Google Drive画像表示）
-- [sw.js](file:///C:/Users/admin/.gemini/antigravity/scratch/hydrodaily/sw.js): Service Worker キャッシュバスター（`hydrodaily-v1.7.0`）
-- [gas/Code.gs](file:///C:/Users/admin/.gemini/antigravity/scratch/hydrodaily/gas/Code.gs): バックエンドGAS（`journal_logs` シート作成、`action: journal`、`action: get_timeline`）
+- [index.html](file:///C:/Users/admin/.gemini/antigravity/scratch/hydrodaily/index.html): 本番フロントエンド（v1.7.1対応、同期バー、ID重複排除マージ、新GAS URL、安全な日付パース）
+- [sw.js](file:///C:/Users/admin/.gemini/antigravity/scratch/hydrodaily/sw.js): Service Worker キャッシュバスター（`hydrodaily-v1.7.1`）
+- [gas/Code.gs](file:///C:/Users/admin/.gemini/antigravity/scratch/hydrodaily/gas/Code.gs): バックエンドGAS（`journal_logs` シート自動作成、`action: journal`、`action: get_timeline`）
 - [mock_sync_timeline.html](file:///C:/Users/admin/.gemini/antigravity/scratch/hydrodaily/mock_sync_timeline.html): タイムライン同期UIモック
 - [tests/test_all_e2e.py](file:///C:/Users/admin/.gemini/antigravity/scratch/hydrodaily/tests/test_all_e2e.py): 全21件の総合E2Eテストスイート
 - [tests/test_timeline_sync_e2e.py](file:///C:/Users/admin/.gemini/antigravity/scratch/hydrodaily/tests/test_timeline_sync_e2e.py): タイムライン同期・重複排除・Drive画像Lightboxテスト
@@ -66,8 +67,15 @@
 
 ---
 
-## 🎯 5. 次の担当者への直近タスク（Next Immediate Step）
-1. **本番GAS Web Appの再デプロイ（新バージョン作成）**:
-   - `gas/Code.gs` のコードを Google Apps Script エディタに反映し、「新しいデプロイ」として公開。
-2. **PC大画面用ダッシュボード（`dashboard.html` / ADR-004）の着手**:
+## ⚠️ 5. 既知の落とし穴・禁止事項
+1. **GASのWeb App再デプロイ時のバージョン選択**:
+   - GASコード修正時は必ず「デプロイを管理」➔「編集」➔「新バージョン」を選択してデプロイすること（コード修正だけでは反映されない）。
+2. **PWAキャッシュの更新**:
+   - 静的HTML変更時は必ず `sw.js` のキャッシュ名バージョン（`CACHE_NAME`）をインクリメントすること。
+
+---
+
+## 🎯 6. 次の担当者への直近タスク（Next Immediate Step）
+1. **PC大画面用ダッシュボード（`dashboard.html` / ADR-004）の着手**:
    - 10年日記の年次横断比較（前年同月の写真と今年の写真の並列比較）。
+   - PCデスク環境での快適な観察・知見の蓄積画面の構築。
