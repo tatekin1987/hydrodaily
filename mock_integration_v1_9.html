@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HydroDaily v1.9 Prototype Mock</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .animate-slide-up {
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 antialiased min-h-screen pb-24">
+
+  <!-- Header -->
+  <header class="bg-emerald-700 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <span class="text-2xl">🌱</span>
+        <div>
+          <h1 class="text-base font-black tracking-tight leading-tight">HydroDaily</h1>
+          <span class="text-[10px] text-emerald-200 font-semibold tracking-wider uppercase">v1.9 Integration Mock</span>
+        </div>
+      </div>
+      <div class="flex items-center space-x-1.5">
+        <span id="header-today" class="text-xs font-bold bg-emerald-800/80 px-2 py-1 rounded-md text-emerald-100">今日: 2026-10-12</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-md mx-auto px-2 flex border-t border-emerald-600/60 bg-emerald-800/40">
+      <button id="tab-btn-record" onclick="switchTab('record')" class="flex-1 py-2 text-center text-xs font-bold border-b-2 border-white text-white flex items-center justify-center space-x-1">
+        <span>💧</span><span>記録・追肥</span>
+      </button>
+      <button id="tab-btn-timeline" onclick="switchTab('timeline')" class="flex-1 py-2 text-center text-xs font-semibold text-emerald-200 hover:text-white border-b-2 border-transparent flex items-center justify-center space-x-1">
+        <span>📜</span><span>タイムライン</span>
+        <span id="timeline-count-badge" class="bg-emerald-500 text-white text-[9px] px-1.5 py-0.2 rounded-full font-bold ml-1">2</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-md mx-auto px-3 py-3">
+
+    <!-- ==================== TAB 1: 記録画面 ==================== -->
+    <section id="view-record" class="space-y-3 block">
+      
+      <!-- System Selector -->
+      <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
+        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">リザーバー系統セレクター（本日の記録状況）</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button id="tab-bato" onclick="selectSystem('bato')" class="py-2.5 px-1.5 rounded-xl text-center font-bold text-xs bg-emerald-600 text-white shadow-xs flex flex-col items-center justify-center transition border-2 border-emerald-600">
+            <span>BatoBucket</span>
+            <span class="text-[9px] opacity-80 mt-0.5">94L・秋ナス</span>
+            <span id="tab-bato-status" class="mt-1.5 bg-amber-100 text-amber-800 text-[9px] px-2 py-0.5 rounded-full font-black">⏳ 未記録</span>
+          </button>
+          <button id="tab-dwc" onclick="selectSystem('dwc')" class="py-2.5 px-1.5 rounded-xl text-center font-bold text-xs bg-slate-50 text-slate-600 hover:bg-slate-100 flex flex-col items-center justify-center transition border-2 border-transparent">
+            <span>DWC / NFT</span>
+            <span class="text-[9px] text-slate-400 mt-0.5">140L・葉物</span>
+            <span id="tab-dwc-status" class="mt-1.5 bg-amber-100 text-amber-800 text-[9px] px-2 py-0.5 rounded-full font-black">⏳ 未記録</span>
+          </button>
+          <button id="tab-tower" onclick="selectSystem('tower')" class="py-2.5 px-1.5 rounded-xl text-center font-bold text-xs bg-slate-50 text-slate-600 hover:bg-slate-100 flex flex-col items-center justify-center transition border-2 border-transparent">
+            <span>タワー型</span>
+            <span class="text-[9px] text-slate-400 mt-0.5">19L・ミニトマト</span>
+            <span id="tab-tower-status" class="mt-1.5 bg-amber-100 text-amber-800 text-[9px] px-2 py-0.5 rounded-full font-black">⏳ 未記録</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick EC Input & Dosage Card -->
+      <div class="bg-white rounded-2xl p-4 shadow-xs border border-slate-200/80 space-y-3.5">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div>
+            <span id="current-system-badge" class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">BatoBucket 94L</span>
+            <h2 id="current-crop-name" class="text-sm font-black text-slate-800 mt-1">スティックセニョール・秋ナス</h2>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] text-slate-400 block font-semibold">目標EC</span>
+            <span id="target-ec-display" class="text-lg font-black text-emerald-700">2.2 <span class="text-[10px] font-normal text-slate-500">mS/cm</span></span>
+          </div>
+        </div>
+
+        <!-- EC Input -->
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">実測EC (mS/cm)</label>
+          <div class="flex space-x-2">
+            <input type="number" step="0.1" id="input-current-ec" placeholder="例: 1.8" value="1.8"
+              class="w-full text-2xl font-black text-slate-800 bg-slate-50 rounded-xl px-3 py-2.5 border-2 border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none transition text-center"
+              oninput="recalcDosage()">
+            <div class="flex flex-col space-y-1">
+              <button onclick="adjustEc(-0.1)" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-lg text-xs font-bold text-slate-700 transition">-0.1</button>
+              <button onclick="adjustEc(0.1)" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-lg text-xs font-bold text-slate-700 transition">+0.1</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dosage Result Box -->
+        <div class="border border-emerald-200 bg-emerald-50/70 rounded-xl p-3 text-center">
+          <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">OAT 原液追肥量 (A液 / B液 各)</span>
+          <div class="mt-0.5 flex items-baseline justify-center space-x-1">
+            <span id="display-added-ml" class="text-3xl font-black text-emerald-700">150.4</span>
+            <span class="text-sm font-bold text-emerald-800">mL</span>
+          </div>
+          <p id="calc-formula-desc" class="text-[10px] text-slate-400 mt-0.5">水道満水(94L) ✕ 差分EC(0.4) ✕ 4.0</p>
+        </div>
+
+        <!-- Temp & pH Inputs -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">水温 (°C)</label>
+            <input type="number" step="0.5" id="input-temp" value="22.5" placeholder="22.5" class="w-full py-2 px-3 border border-slate-200 rounded-xl bg-slate-50 text-sm font-semibold focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">pH</label>
+            <input type="number" step="0.1" id="input-ph" value="6.2" placeholder="6.2" class="w-full py-2 px-3 border border-slate-200 rounded-xl bg-slate-50 text-sm font-semibold focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <!-- Memo Input -->
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">観察メモ（生育・葉色・根の状態）</label>
+          <textarea id="input-memo" rows="2" placeholder="例: 秋ナスの花蕾が肥大中。下葉に異常なし。"
+            class="w-full text-xs text-slate-800 bg-slate-50 rounded-xl px-3 py-2 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none resize-none">秋ナスの花蕾が肥大中。下葉にうどんこ病の兆候なし、根張り良好！</textarea>
+        </div>
+
+        <!-- Photo Attachments with Bottom Sheet Trigger -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-[11px] font-bold text-slate-600">現場写真（最大3枚・自動Canvas圧縮）</label>
+            <span id="photo-count-badge" class="text-[10px] text-slate-400 font-bold">1 / 3枚</span>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <!-- New Trigger Button for Bottom Sheet -->
+            <button type="button" id="btn-record-add-photo" onclick="openPhotoPickerSheet()"
+              class="flex items-center space-x-1.5 px-3.5 py-2 border-2 border-dashed border-emerald-400 hover:border-emerald-600 bg-emerald-50/50 hover:bg-emerald-50 rounded-xl text-xs font-black text-emerald-800 transition active:scale-95 cursor-pointer">
+              <span class="text-base">📷</span>
+              <span>写真を追加</span>
+            </button>
+            <span class="text-[10px] text-slate-400">タップしてカメラまたはアルバムを選択</span>
+          </div>
+
+          <!-- Photo Preview Tray -->
+          <div id="photo-preview-grid" class="flex space-x-2 mt-2.5 overflow-x-auto pb-1">
+            <div class="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 shadow-2xs group">
+              <img src="https://images.unsplash.com/photo-1592417817098-8f3d69109853?w=300&auto=format&fit=crop" class="w-full h-full object-cover">
+              <button onclick="removeMockPhoto(0)" class="absolute top-0.5 right-0.5 bg-black/70 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save Button -->
+        <button id="btn-save" onclick="mockSaveRecord()"
+          class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-sm rounded-xl shadow-md transition flex items-center justify-center space-x-2 cursor-pointer">
+          <span id="btn-save-text">💾 記録をGoogleシートに保存</span>
+          <div id="save-spinner" class="hidden">
+            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: タイムライン日誌 ==================== -->
+    <section id="view-timeline" class="space-y-3 hidden">
+      <div class="flex items-center justify-between pb-1">
+        <h2 class="text-sm font-black text-slate-800 flex items-center space-x-1">
+          <span>📜</span><span>栽培タイムライン日誌</span>
+        </h2>
+        <span class="text-[10px] text-slate-400">水質記録・観察メモを自動集約</span>
+      </div>
+
+      <!-- Feed Container -->
+      <div id="timeline-feed-container" class="space-y-3">
+        <!-- Cards will be populated here -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== Photo Picker Bottom Sheet Modal ==================== -->
+  <div id="photo-picker-sheet" class="fixed inset-0 z-50 hidden">
+    <!-- Backdrop -->
+    <div onclick="closePhotoPickerSheet()" class="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"></div>
+    
+    <!-- Sheet Content -->
+    <div class="absolute bottom-0 inset-x-0 bg-white rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 animate-slide-up max-w-md mx-auto">
+      <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto mb-4"></div>
+      
+      <div class="text-center mb-4">
+        <h3 class="text-base font-black text-slate-800">現場写真の追加</h3>
+        <p class="text-xs text-slate-500 mt-0.5">追加方法を選択してください（長辺1000pxに自動最適化）</p>
+      </div>
+
+      <div class="space-y-2.5">
+        <!-- Camera Button -->
+        <button id="btn-sheet-camera" onclick="triggerMockCamera()"
+          class="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-2xl font-black text-sm flex items-center justify-center space-x-2.5 shadow-sm transition active:scale-98 cursor-pointer">
+          <span class="text-xl">📸</span>
+          <span>カメラで今すぐ撮影（現場用）</span>
+        </button>
+
+        <!-- Gallery Button -->
+        <button id="btn-sheet-gallery" onclick="triggerMockGallery()"
+          class="w-full py-3.5 px-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 rounded-2xl font-black text-sm flex items-center justify-center space-x-2.5 transition active:scale-98 cursor-pointer border border-slate-200">
+          <span class="text-xl">🖼️</span>
+          <span>アルバム / ギャラリーから選択</span>
+        </button>
+
+        <!-- Cancel Button -->
+        <button id="btn-sheet-cancel" onclick="closePhotoPickerSheet()"
+          class="w-full py-3 text-slate-400 hover:text-slate-600 font-bold text-xs mt-2 transition">
+          キャンセル
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 inset-x-4 max-w-sm mx-auto bg-slate-900/90 backdrop-blur-md text-white text-xs font-bold py-3 px-4 rounded-xl shadow-xl flex items-center justify-between transition-all duration-300 z-50 hidden">
+    <span id="toast-text">✅ 記録を保存しました！</span>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    const SYSTEMS = {
+      bato: { name: 'BatoBucket', crop: 'スティックセニョール・秋ナス', vol: 94, targetEc: 2.2 },
+      dwc: { name: 'DWC / NFT', crop: 'サンチュ・青ネギ・葉物野菜', vol: 140, targetEc: 1.4 },
+      tower: { name: 'タワー型', crop: 'ミニトマト・ハーブ', vol: 19, targetEc: 1.8 }
+    };
+    let currentSysKey = 'bato';
+    let attachedPhotos = [
+      'https://images.unsplash.com/photo-1592417817098-8f3d69109853?w=300&auto=format&fit=crop'
+    ];
+
+    // Initial timeline entries (Mock)
+    let timelineEntries = [
+      {
+        id: 'entry_1',
+        date: '2026年10月11日',
+        dayName: '日曜日',
+        system: 'DWC / NFT',
+        ec: '1.4',
+        addedMl: '0.0',
+        temp: '21.0',
+        ph: '6.4',
+        memo: 'サンチュの収穫期。液肥安定、根腐れなし。',
+        photos: ['https://images.unsplash.com/photo-1540420773420-3366772f4999?w=300&auto=format&fit=crop']
+      }
+    ];
+
+    function renderTimeline() {
+      const container = document.getElementById('timeline-feed-container');
+      container.innerHTML = '';
+      timelineEntries.forEach((entry, idx) => {
+        const article = document.createElement('article');
+        article.className = 'bg-white rounded-2xl p-4 shadow-xs border border-slate-200/80 space-y-2.5 transition';
+        
+        let photosHtml = '';
+        if (entry.photos && entry.photos.length > 0) {
+          photosHtml = `<div class="flex space-x-2 overflow-x-auto pb-1 mt-1.5">
+            ${entry.photos.map(p => `<img src="${p}" class="w-20 h-20 rounded-xl object-cover border border-slate-100 flex-shrink-0">`).join('')}
+          </div>`;
+        }
+
+        article.innerHTML = `
+          <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div class="flex items-center space-x-1.5">
+              <span class="text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md">${entry.system}</span>
+              <span class="text-[11px] font-bold text-slate-400">${entry.date} (${entry.dayName})</span>
+            </div>
+            <button onclick="deleteMockEntry('${entry.id}')" class="text-[10px] text-slate-300 hover:text-rose-600 font-bold px-1.5 py-0.5 rounded transition">🗑️ 削除</button>
+          </div>
+          
+          <!-- Water stats badges -->
+          <div class="flex flex-wrap gap-1.5 text-[10px] font-black">
+            <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">EC: ${entry.ec} mS/cm</span>
+            ${entry.addedMl ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">💧 追肥: 各${entry.addedMl} mL</span>` : ''}
+            ${entry.temp ? `<span class="bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md">🌡️ ${entry.temp}℃</span>` : ''}
+            ${entry.ph ? `<span class="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md">🧪 pH ${entry.ph}</span>` : ''}
+          </div>
+
+          <p class="text-xs text-slate-800 leading-relaxed font-medium">${entry.memo || '<span class="text-slate-400 italic">メモなし</span>'}</p>
+          ${photosHtml}
+        `;
+        container.appendChild(article);
+      });
+      document.getElementById('timeline-count-badge').textContent = timelineEntries.length;
+    }
+
+    function selectSystem(sysKey) {
+      currentSysKey = sysKey;
+      ['bato', 'dwc', 'tower'].forEach(k => {
+        const btn = document.getElementById(`tab-${k}`);
+        if (k === sysKey) {
+          btn.className = 'py-2.5 px-1.5 rounded-xl text-center font-bold text-xs bg-emerald-600 text-white shadow-xs flex flex-col items-center justify-center transition border-2 border-emerald-600';
+        } else {
+          btn.className = 'py-2.5 px-1.5 rounded-xl text-center font-bold text-xs bg-slate-50 text-slate-600 hover:bg-slate-100 flex flex-col items-center justify-center transition border-2 border-transparent';
+        }
+      });
+      const conf = SYSTEMS[sysKey];
+      document.getElementById('current-system-badge').textContent = `${conf.name} ${conf.vol}L`;
+      document.getElementById('current-crop-name').textContent = conf.crop;
+      document.getElementById('target-ec-display').innerHTML = `${conf.targetEc} <span class="text-[10px] font-normal text-slate-500">mS/cm</span>`;
+      recalcDosage();
+    }
+
+    function recalcDosage() {
+      const conf = SYSTEMS[currentSysKey];
+      const curEc = parseFloat(document.getElementById('input-current-ec').value) || 0;
+      const diff = Math.max(0, conf.targetEc - curEc);
+      const added = (diff * conf.vol * 4.0).toFixed(1);
+      document.getElementById('display-added-ml').textContent = added;
+      document.getElementById('calc-formula-desc').textContent = `水道満水(${conf.vol}L) ✕ 差分EC(${diff.toFixed(1)}) ✕ 4.0`;
+    }
+
+    function adjustEc(delta) {
+      const el = document.getElementById('input-current-ec');
+      let val = parseFloat(el.value) || 1.8;
+      val = Math.max(0.6, Math.min(3.4, +(val + delta).toFixed(1)));
+      el.value = val;
+      recalcDosage();
+    }
+
+    // Photo Bottom Sheet
+    function openPhotoPickerSheet() {
+      document.getElementById('photo-picker-sheet').classList.remove('hidden');
+    }
+
+    function closePhotoPickerSheet() {
+      document.getElementById('photo-picker-sheet').classList.add('hidden');
+    }
+
+    function triggerMockCamera() {
+      closePhotoPickerSheet();
+      showToast('📸 カメラ起動（実機: 背面カメラ直結）');
+      addSamplePhoto('https://images.unsplash.com/photo-1592417817098-8f3d69109853?w=300&auto=format&fit=crop');
+    }
+
+    function triggerMockGallery() {
+      closePhotoPickerSheet();
+      showToast('🖼️ アルバム起動（複数写真一括選択）');
+      addSamplePhoto('https://images.unsplash.com/photo-1540420773420-3366772f4999?w=300&auto=format&fit=crop');
+    }
+
+    function addSamplePhoto(url) {
+      if (attachedPhotos.length >= 3) {
+        showToast('⚠️ 写真は最大3枚までです');
+        return;
+      }
+      attachedPhotos.push(url);
+      renderThumbnails();
+    }
+
+    function removeMockPhoto(idx) {
+      attachedPhotos.splice(idx, 1);
+      renderThumbnails();
+    }
+
+    function renderThumbnails() {
+      const grid = document.getElementById('photo-preview-grid');
+      grid.innerHTML = '';
+      attachedPhotos.forEach((src, idx) => {
+        const div = document.createElement('div');
+        div.className = 'relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 shadow-2xs group';
+        div.innerHTML = `<img src="${src}" class="w-full h-full object-cover">
+          <button onclick="removeMockPhoto(${idx})" class="absolute top-0.5 right-0.5 bg-black/70 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">✕</button>`;
+        grid.appendChild(div);
+      });
+      document.getElementById('photo-count-badge').textContent = `${attachedPhotos.length} / 3枚`;
+    }
+
+    // Save Record (Integration logic)
+    function mockSaveRecord() {
+      const saveBtn = document.getElementById('btn-save');
+      const spinner = document.getElementById('save-spinner');
+      const btnText = document.getElementById('btn-save-text');
+
+      saveBtn.disabled = true;
+      spinner.classList.remove('hidden');
+      btnText.textContent = '保存中...';
+
+      setTimeout(() => {
+        // 1. Create entry for timeline
+        const conf = SYSTEMS[currentSysKey];
+        const newEntry = {
+          id: 'entry_' + Date.now(),
+          date: '2026年10月12日',
+          dayName: '月曜日',
+          system: conf.name,
+          ec: document.getElementById('input-current-ec').value,
+          addedMl: document.getElementById('display-added-ml').textContent,
+          temp: document.getElementById('input-temp').value,
+          ph: document.getElementById('input-ph').value,
+          memo: document.getElementById('input-memo').value,
+          photos: [...attachedPhotos]
+        };
+
+        // 2. Prepend to timeline
+        timelineEntries.unshift(newEntry);
+        renderTimeline();
+
+        // 3. Update status badge to ✅
+        const badge = document.getElementById(`tab-${currentSysKey}-status`);
+        badge.textContent = '✅ 本日記録済';
+        badge.className = 'mt-1.5 bg-white/20 text-white text-[9px] px-2 py-0.5 rounded-full font-black';
+
+        // 4. UI Cleanup
+        saveBtn.disabled = false;
+        spinner.classList.add('hidden');
+        btnText.textContent = '💾 記録をGoogleシートに保存';
+        showToast('✅ 記録を保存し、タイムラインに反映しました！');
+
+        // Automatically switch to timeline to show integrated result!
+        setTimeout(() => switchTab('timeline'), 600);
+      }, 400);
+    }
+
+    function deleteMockEntry(id) {
+      if (!confirm('この日誌を削除しますか？')) return;
+      timelineEntries = timelineEntries.filter(e => e.id !== id);
+      renderTimeline();
+      // Re-evaluate today status
+      const hasTodayBato = timelineEntries.some(e => e.system === SYSTEMS[currentSysKey].name && e.date.includes('10月12日'));
+      const badge = document.getElementById(`tab-${currentSysKey}-status`);
+      if (!hasTodayBato) {
+        badge.textContent = '⏳ 未記録';
+        badge.className = 'mt-1.5 bg-amber-100 text-amber-800 text-[9px] px-2 py-0.5 rounded-full font-black';
+      }
+      showToast('🗑️ 日誌を削除しました');
+    }
+
+    function switchTab(tab) {
+      if (tab === 'record') {
+        document.getElementById('view-record').classList.remove('hidden');
+        document.getElementById('view-timeline').classList.add('hidden');
+        document.getElementById('tab-btn-record').className = 'flex-1 py-2 text-center text-xs font-bold border-b-2 border-white text-white flex items-center justify-center space-x-1';
+        document.getElementById('tab-btn-timeline').className = 'flex-1 py-2 text-center text-xs font-semibold text-emerald-200 hover:text-white border-b-2 border-transparent flex items-center justify-center space-x-1';
+      } else {
+        document.getElementById('view-record').classList.add('hidden');
+        document.getElementById('view-timeline').classList.remove('hidden');
+        document.getElementById('tab-btn-record').className = 'flex-1 py-2 text-center text-xs font-semibold text-emerald-200 hover:text-white border-b-2 border-transparent flex items-center justify-center space-x-1';
+        document.getElementById('tab-btn-timeline').className = 'flex-1 py-2 text-center text-xs font-bold border-b-2 border-white text-white flex items-center justify-center space-x-1';
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2500);
+    }
+
+    // Init
+    renderTimeline();
+  </script>
+</body>
+</html>
