@@ -142,7 +142,7 @@ class Dashboard10YearE2ETest(unittest.TestCase):
         self.page.goto(self.url)
 
         # 2025年のカードに近似バッジ（2日前など）が表示されていること
-        expect(self.page.locator(".proximity-badge")).to_be_visible()
+        expect(self.page.locator(".proximity-badge").first).to_be_visible()
         expect(self.page.locator("text=2025年は10月8日")).to_be_visible()
 
     def test_tc_dash_04_lightbox_modal(self):
