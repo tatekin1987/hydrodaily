@@ -37,8 +37,12 @@ class Dashboard10YearE2ETest(unittest.TestCase):
         cls.httpd.shutdown()
 
     def setUp(self):
-        self.context = self.browser.new_context()
+        # 時計とタイムゾーンを固定（テストのデータは 2026-10-10。固定しないと日がたつと落ちる。2026-11-08）
+        self.context = self.browser.new_context(timezone_id="Asia/Tokyo")
+        # 本番の GAS にはつながない（本番のデータやネットの具合でテストの結果が変わらないように）
+        self.context.route("**/script.google.com/**", lambda route: route.abort())
         self.page = self.context.new_page()
+        self.page.clock.set_fixed_time("2026-10-10T10:00:00+09:00")
         self.page.set_default_timeout(3000)
         self.url = f"http://127.0.0.1:{self.port}/dashboard.html"
 

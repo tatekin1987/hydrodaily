@@ -4,7 +4,7 @@ Verified via Playwright (channel='msedge')
 Acceptance Criteria:
 1. 【計算検証】BatoBucket (94L) EC 1.8 -> 2.2 => A液/B液 各150.4 mL
 2. 【飽和検証】現在EC >= 目標EC => 「追肥不要（0 mL）」
-3. 【安全停止】現在EC <= 0.5 または >= 3.5 => 警告表示 & 保存ボタンDisabled
+3. 【安全停止】現在EC >= 3.5 => 警告表示 & 保存ボタンDisabled（下限ロックは2026-11-08廃止）
 4. 【UX防衛】入力中にリロードしてもLocalStorageから復元
 5. 【二重送信防止】保存ボタン押下直後にDisabled化 & スピナー表示
 6. 【農薬計算】希釈倍率と水量から薬量を正しく算出
@@ -94,17 +94,20 @@ class HydroDailyE2ETest(unittest.TestCase):
         self.assertTrue("0" in added_ml or "追肥不要" in added_ml)
 
     def test_03_safety_lock_abnormal_ec(self):
-        """【安全停止】EC <= 0.5 または >= 3.5 => 警告表示 & 保存ボタンDisabled"""
+        """【安全停止】EC >= 3.5（下限なし） => 警告表示 & 保存ボタンDisabled"""
         self.page.goto(self.url)
         self.page.locator('[data-testid="tab-bato"]').click()
         ec_input = self.page.locator('[data-testid="input-current-ec"]')
         save_btn = self.page.locator('[data-testid="btn-save"]')
         warning_box = self.page.locator('[data-testid="warning-box"]')
 
-        # Test EC <= 0.5
+        # 下限ロックは廃止（2026-11-08）：0.4 も 0 も保存できる
         ec_input.fill("0.4")
-        self.assertTrue(warning_box.is_visible())
-        self.assertTrue(save_btn.is_disabled())
+        self.assertFalse(warning_box.is_visible())
+        self.assertFalse(save_btn.is_disabled())
+        ec_input.fill("0")
+        self.assertFalse(warning_box.is_visible())
+        self.assertFalse(save_btn.is_disabled())
 
         # Test EC >= 3.5
         ec_input.fill("3.6")

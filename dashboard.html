@@ -117,7 +117,8 @@
     function getEntries() {
       try {
         const blacklist = JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]');
-        const stored = localStorage.getItem('hydro_timeline_entries');
+        // v2（2026-11-08）：シートから取った写しは hydro_dashboard_cache に置く。古い hydro_timeline_entries は読むだけ（書き戻さない）
+        const stored = localStorage.getItem('hydro_dashboard_cache') || localStorage.getItem('hydro_timeline_entries');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
@@ -336,17 +337,9 @@
         if (res.ok) {
           const data = await res.json();
           if (data && data.status === "success" && Array.isArray(data.entries)) {
-            const blacklist = JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]');
-            const local = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
-            const map = new Map();
-            local.forEach(e => map.set(e.id, e));
-            data.entries.forEach(e => {
-              if (!blacklist.includes(e.id)) {
-                map.set(e.id, e);
-              }
-            });
-            const merged = Array.from(map.values()).sort((a,b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
-            localStorage.setItem('hydro_timeline_entries', JSON.stringify(merged));
+            // シート（v2 の「記録」）が正。消した記録は get_timeline に出てこないので、そのまま写す
+            const merged = data.entries.slice().sort((a,b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
+            try { localStorage.setItem('hydro_dashboard_cache', JSON.stringify(merged)); } catch (e) {}
             renderComparison();
           }
         }

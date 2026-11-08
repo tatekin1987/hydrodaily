@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HydroDaily v2 モック</title>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --mist:#F3F7F5; --paper:#FFFFFF; --ink:#1D2B2A; --ink2:#53625F; --line:#D5E0DC;
+  --water:#2F7D8C; --water-soft:#DCEEF1;
+  --bato:#4E7D3A; --dwc:#7FA233; --tower:#47668F;
+  --due:#B7791F; --due-soft:#FBF1DC; --stop:#B42318; --stop-soft:#FDE7E4; --ok:#2E7D4F;
+  --r-lg:18px; --r-md:12px; --r-sm:8px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--mist);color:var(--ink);font-family:"BIZ UDPGothic",system-ui,sans-serif;font-size:16px;line-height:1.6;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:96px}
+.mockbar{background:#FFF7D6;color:#6B5200;font-size:12px;text-align:center;padding:4px 8px}
+header{display:flex;align-items:center;gap:10px;padding:12px 16px 8px}
+header h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.02em}
+header .ver{font-size:12px;color:var(--ink2)}
+header .gear{margin-left:auto;width:44px;height:44px;border:0;background:transparent;border-radius:50%;font-size:22px;cursor:pointer}
+.sync{margin:0 16px 12px;display:flex;align-items:center;gap:8px;font-size:14px;padding:8px 12px;border-radius:var(--r-md);background:var(--paper);border:1px solid var(--line)}
+.sync .dot{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.sync.wait{background:var(--due-soft);border-color:#EBCB8B}
+.sync.wait .dot{background:var(--due)}
+.sync button{margin-left:auto;flex:none;white-space:nowrap;min-height:44px;padding:0 14px;border-radius:var(--r-sm);border:1px solid var(--due);background:#fff;color:var(--due);font-weight:700;cursor:pointer}
+main{padding:0 16px}
+section.view{display:none}
+section.view.on{display:block}
+h2{font-size:17px;margin:20px 0 8px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px}
+.today{border-left:6px solid var(--due)}
+.today h2{margin:0 0 6px}
+.task{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.task:first-of-type{border-top:0}
+.task .sys{flex:none;width:8px;height:36px;border-radius:4px;margin-top:2px}
+.task .t{font-weight:700}
+.task .d{font-size:13px;color:var(--ink2)}
+.task button{margin-left:auto;flex:none;min-height:44px;min-width:64px;border-radius:var(--r-sm);border:1px solid var(--line);background:#fff;font-weight:700;cursor:pointer}
+.empty{color:var(--ink2);font-size:14px;padding:6px 0}
+/* 系統を選ぶ */
+.systems{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.sysbtn{min-height:64px;border-radius:var(--r-md);border:2px solid var(--line);background:#fff;text-align:left;padding:8px 10px;cursor:pointer}
+.sysbtn b{display:block;font-size:15px}
+.sysbtn span{display:block;font-size:12px;color:var(--ink2);line-height:1.3}
+.sysbtn[aria-pressed=true]{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,#fff);box-shadow:inset 0 -4px 0 var(--c)}
+.seg{display:flex;background:var(--water-soft);border-radius:var(--r-md);padding:4px;gap:4px;margin:12px 0}
+.seg button{flex:1;min-height:44px;border:0;border-radius:var(--r-sm);background:transparent;font-weight:700;cursor:pointer;color:var(--ink2)}
+.seg button[aria-pressed=true]{background:#fff;color:var(--water);box-shadow:0 1px 0 var(--line)}
+/* ECの帯（このアプリの目玉） */
+.gauge{margin:6px 0 4px}
+.gauge .nums{display:flex;align-items:baseline;gap:10px;font-variant-numeric:tabular-nums}
+.gauge .now{font-size:56px;font-weight:700;line-height:1;color:var(--water)}
+.gauge .to{font-size:15px;color:var(--ink2)}
+.tank{position:relative;height:28px;border-radius:14px;background:linear-gradient(90deg,#EEF4F2,#EEF4F2);border:1px solid var(--line);overflow:hidden;margin-top:10px}
+.tank .fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(180deg,#5FA7B4,var(--water));transition:width .25s ease}
+.tank .target{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--ink)}
+.tank .lock{position:absolute;top:0;bottom:0;right:0;background:repeating-linear-gradient(135deg,#F6D2CC 0 6px,#FBE6E2 6px 12px)}
+.scale{display:flex;justify-content:space-between;font-size:11px;color:var(--ink2);margin-top:2px;font-variant-numeric:tabular-nums}
+.stepper{display:grid;grid-template-columns:64px 1fr 64px;gap:8px;margin-top:12px}
+.stepper button{min-height:56px;border-radius:var(--r-md);border:1px solid var(--line);background:#fff;font-size:24px;font-weight:700;cursor:pointer}
+.stepper input{min-width:0;width:100%;min-height:56px;border-radius:var(--r-md);border:2px solid var(--water);text-align:center;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.dose{margin-top:14px;padding:14px;border-radius:var(--r-md);background:var(--water-soft);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.dose b{font-size:34px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.dose small{color:var(--ink2);width:100%;font-size:12px}
+.warn{margin-top:10px;padding:10px 12px;border-radius:var(--r-md);background:var(--stop-soft);color:var(--stop);font-size:14px;font-weight:700;display:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+label.f{display:block;font-size:13px;color:var(--ink2);margin-top:12px}
+label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:4px;min-height:48px;border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 12px;background:#fff}
+textarea{min-height:88px!important;resize:vertical}
+.photos{display:flex;gap:8px;margin-top:10px}
+.photos button{width:64px;height:64px;border-radius:var(--r-md);border:2px dashed var(--line);background:#fff;font-size:22px;cursor:pointer}
+.save{display:block;width:100%;min-height:60px;margin-top:16px;border:0;border-radius:var(--r-md);background:var(--water);color:#fff;font-size:18px;font-weight:700;cursor:pointer}
+.save:disabled{background:#9DB7BC;cursor:not-allowed}
+.save.sending{background:#5FA7B4}
+/* 見返し */
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:#fff;font-size:14px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chart{width:100%;height:auto;display:block}
+.chartnote{font-size:12px;color:var(--ink2);margin-top:4px}
+.day{margin-top:14px}
+.day .dh{font-size:13px;color:var(--ink2);font-weight:700;margin-bottom:4px}
+.rec{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:6px}
+.rec .bar{width:6px;align-self:stretch;border-radius:3px;flex:none}
+.rec .k{font-size:12px;font-weight:700;color:var(--ink2)}
+.rec .v{font-weight:700;font-variant-numeric:tabular-nums}
+.rec .m{font-size:14px;color:var(--ink)}
+.rec .act{margin-left:auto;display:flex;flex-direction:column;gap:8px}
+.rec .act button{min-width:48px;min-height:44px;border-radius:var(--r-sm);border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer}
+.rec .act button.del{color:var(--stop)}
+.pend{font-size:11px;color:var(--due);font-weight:700}
+/* 予定 */
+.plan{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.plan:first-of-type{border-top:0}
+.plan .chk{width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:#fff;flex:none;font-size:20px;cursor:pointer}
+.plan.done .chk{background:var(--ok);border-color:var(--ok);color:#fff}
+.plan.done .pt{text-decoration:line-through;color:var(--ink2)}
+.plan .pt{font-weight:700}
+.plan .pw{font-size:13px;color:var(--ink2)}
+.plan .edit{margin-left:auto;min-height:44px;min-width:56px;border-radius:var(--r-sm);border:1px solid var(--line);background:#fff;cursor:pointer}
+.year{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mon{min-height:76px;border:1px solid var(--line);border-radius:var(--r-md);background:#fff;padding:6px 8px;text-align:left;cursor:pointer;font-size:12px}
+.mon b{display:block;font-size:15px}
+.mon.now{border:2px solid var(--water)}
+.mon .dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+.mon .dots i{width:9px;height:9px;border-radius:50%}
+.add{width:100%;min-height:52px;margin-top:12px;border-radius:var(--r-md);border:2px dashed var(--water);background:#fff;color:var(--water);font-weight:700;cursor:pointer}
+/* 農薬 */
+.litre{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.litre button{flex:1;min-width:60px;min-height:48px;border-radius:var(--r-sm);border:1px solid var(--line);background:#fff;font-weight:700;cursor:pointer}
+.litre button[aria-pressed=true]{border:2px solid var(--water);color:var(--water)}
+.uses{margin-top:10px;font-size:14px;padding:10px 12px;border-radius:var(--r-md);background:#F4F7F6}
+.uses.over{background:var(--stop-soft);color:var(--stop);font-weight:700}
+/* 下のタブ */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs button{min-height:68px;border:0;background:transparent;font-size:13px;font-weight:700;color:var(--ink2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
+nav.tabs button .ic{font-size:22px;line-height:1}
+nav.tabs button[aria-current=page]{color:var(--water)}
+nav.tabs button[aria-current=page]::before{content:"";position:absolute;top:0;left:22%;right:22%;height:4px;border-radius:0 0 4px 4px;background:var(--water)}
+nav.tabs .badge{position:absolute;top:8px;right:calc(50% - 22px);min-width:18px;height:18px;border-radius:9px;background:var(--due);color:#fff;font-size:11px;line-height:18px}
+@media (min-width:521px){nav.tabs{max-width:520px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}}
+/* 下から出る編集の板 */
+.sheet-bg{position:fixed;inset:0;background:rgba(29,43,42,.45);display:none;z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:#fff;border-radius:22px 22px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));z-index:21;transform:translateY(105%);visibility:hidden;transition:transform .22s ease,visibility 0s .22s;max-height:88vh;overflow:auto}
+.sheet.on{transform:none;visibility:visible;transition:transform .22s ease}
+.sheet h3{margin:0 0 4px;font-size:18px}
+.sheet .row{display:flex;gap:8px;margin-top:16px}
+.sheet .row button{flex:1;min-height:52px;border-radius:var(--r-md);font-weight:700;cursor:pointer}
+.btn-sub{border:1px solid var(--line);background:#fff}
+.btn-main{border:0;background:var(--water);color:#fff}
+.btn-del{border:1px solid var(--stop);background:#fff;color:var(--stop);flex:0 0 96px!important}
+.toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:var(--r-md);font-size:14px;display:none;z-index:30;max-width:90vw}
+:focus-visible{outline:3px solid #F2B705;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="mockbar">モック（見た目と動きの確認用）。数字はすべて見本です。保存しても送りません。</div>
+  <header>
+    <h1>HydroDaily</h1><span class="ver">v2.0</span>
+    <button class="gear" aria-label="設定" onclick="openSheet('sheet-settings')">⚙️</button>
+  </header>
+  <div class="sync wait" id="sync">
+    <span class="dot"></span><span id="sync-text">未送信 2件（電波が戻ったら自動で送ります）</span>
+    <button onclick="sendNow()">いま送る</button>
+  </div>
+
+  <main>
+    <!-- 記録 -->
+    <section class="view on" id="v-record" data-testid="view-record">
+      <div class="card today" data-testid="today">
+        <h2>今日やること</h2>
+        <div class="task"><i class="sys" style="background:var(--bato)"></i><div><div class="t">BatoBucket：ECを測る日です</div><div class="d">前回 11/1（7日前）EC 1.8</div></div><button onclick="pickSys('bato');toast('BatoBucket を選びました。ECを入れて保存してください')">測る</button></div>
+        <div class="task"><i class="sys" style="background:var(--dwc)"></i><div><div class="t">DWC：種まき ルッコラ</div><div class="d">11月 上旬の予定</div></div><button onclick="this.closest('.task').remove();toast('予定を「済」にしました')">済</button></div>
+      </div>
+
+      <h2>どの系統？</h2>
+      <div class="systems" role="group" aria-label="系統">
+        <button class="sysbtn" style="--c:var(--bato)" data-sys="bato" aria-pressed="true" onclick="pickSys('bato')"><b>BatoBucket</b><span>スティックセニョール</span></button>
+        <button class="sysbtn" style="--c:var(--dwc)" data-sys="dwc" aria-pressed="false" onclick="pickSys('dwc')"><b>DWC</b><span>サンチュ・小松菜・ルッコラ</span></button>
+        <button class="sysbtn" style="--c:var(--tower)" data-sys="tower" aria-pressed="false" onclick="pickSys('tower')"><b>タワー</b><span>スティックセニョール</span></button>
+      </div>
+
+      <div class="seg" role="group" aria-label="記録の種類">
+        <button aria-pressed="true" data-kind="液肥" onclick="pickKind(this)">液肥</button>
+        <button aria-pressed="false" data-kind="水替え" onclick="pickKind(this)">水替え</button>
+        <button aria-pressed="false" data-kind="日誌" onclick="pickKind(this)">日誌だけ</button>
+      </div>
+
+      <div class="card" id="ec-card">
+        <div class="gauge">
+          <div class="nums"><span class="now" id="ec-now">1.8</span><span class="to">→ 目標 <b id="ec-target">2.0</b> mS/cm</span></div>
+          <div class="tank" aria-hidden="true"><div class="lock" style="width:12.5%"></div><div class="fill" id="fill"></div><div class="target" id="tmark"></div></div>
+          <div class="scale"><span>0</span><span>1.0</span><span>2.0</span><span>3.0</span><span>4.0</span></div>
+        </div>
+        <div class="stepper">
+          <button aria-label="0.1 下げる" onclick="step(-0.1)">−</button>
+          <input id="ec-input" inputmode="decimal" value="1.8" aria-label="今のEC" oninput="calc()">
+          <button aria-label="0.1 上げる" onclick="step(0.1)">＋</button>
+        </div>
+        <div class="dose"><span>A液・B液 それぞれ</span><b id="dose">75.2</b><span>mL</span><small id="dose-f">満水 94L × 差 0.2 × 4.0（自動給水なので常に満水）</small></div>
+        <div class="warn" id="warn">3.5 以上は測りまちがいの心配があるので保存できません。センサーを確かめてください。</div>
+        <details style="margin-top:10px"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer">pH・水温も入れる</summary>
+          <div class="grid2"><label class="f">pH<input inputmode="decimal" placeholder="例 6.2"></label><label class="f">水温 ℃<input inputmode="decimal" placeholder="例 14"></label></div>
+        </details>
+      </div>
+
+      <label class="f">メモ<textarea placeholder="気づいたこと（なくてもよい）"></textarea></label>
+      <div class="photos"><button aria-label="カメラで撮る">📷</button><button aria-label="写真を選ぶ">🖼️</button></div>
+      <button class="save" id="save" onclick="save()">BatoBucket の液肥を記録する</button>
+    </section>
+
+    <!-- 見返し -->
+    <section class="view" id="v-history" data-testid="view-history">
+      <h2>見返す</h2>
+      <div class="chips" role="group" aria-label="系統でしぼる">
+        <button class="chip" aria-pressed="true">すべて</button><button class="chip" aria-pressed="false">BatoBucket</button><button class="chip" aria-pressed="false">DWC</button><button class="chip" aria-pressed="false">タワー</button>
+      </div>
+      <div class="chips" role="group" aria-label="種類でしぼる">
+        <button class="chip" aria-pressed="true">すべて</button><button class="chip" aria-pressed="false">液肥</button><button class="chip" aria-pressed="false">水替え</button><button class="chip" aria-pressed="false">農薬</button><button class="chip" aria-pressed="false">日誌</button><button class="chip" aria-pressed="false">写真あり</button>
+      </div>
+      <div class="card" style="margin-top:10px">
+        <div style="font-weight:700;font-size:15px">ECの移り変わり（この30日）</div>
+        <svg class="chart" viewBox="0 0 340 170" role="img" aria-label="系統ごとのECの折れ線">
+          <rect x="34" y="34" width="296" height="44" fill="#DCEEF1" opacity=".6"/>
+          <g font-size="10" fill="#53625F"><text x="4" y="22">2.5</text><text x="4" y="62">2.0</text><text x="4" y="102">1.5</text><text x="4" y="142">1.0</text></g>
+          <g stroke="#E3EBE8"><line x1="34" y1="18" x2="330" y2="18"/><line x1="34" y1="58" x2="330" y2="58"/><line x1="34" y1="98" x2="330" y2="98"/><line x1="34" y1="138" x2="330" y2="138"/></g>
+          <polyline fill="none" stroke="#4E7D3A" stroke-width="3" points="40,82 80,74 120,66 160,70 200,58 240,62 280,66 320,74"/>
+          <polyline fill="none" stroke="#7FA233" stroke-width="3" stroke-dasharray="6 4" points="40,106 80,98 120,94 160,90 200,98 240,90 280,86 320,90"/>
+          <polyline fill="none" stroke="#47668F" stroke-width="3" points="40,90 90,70 140,62 190,74 240,58 290,66 320,62"/>
+          <g font-size="10" fill="#53625F"><text x="34" y="162">10/9</text><text x="170" y="162">10/24</text><text x="296" y="162">11/8</text></g>
+        </svg>
+        <div class="chartnote">— BatoBucket　‐‐ DWC　— タワー　帯は目標ECのあたり（1.6〜2.0）</div>
+      </div>
+
+      <div class="day"><div class="dh">11月8日（日）</div>
+        <div class="rec"><i class="bar" style="background:var(--bato)"></i><div><div class="k">BatoBucket・液肥</div><div class="v">EC 1.8 → 追肥 各 75.2 mL</div><div class="m">花蕾が見えはじめた</div><div class="pend">未送信（電波が戻ったら送ります）</div></div><div class="act"><button onclick="openSheet('sheet-edit')">直す</button></div></div>
+        <div class="rec"><i class="bar" style="background:var(--dwc)"></i><div><div class="k">DWC・農薬</div><div class="v">ゼンターリ 2.0 g（1000倍・水2L）</div><div class="m">アオムシ対策</div></div><div class="act"><button onclick="openSheet('sheet-edit')">直す</button></div></div>
+      </div>
+      <div class="day"><div class="dh">11月1日（日）</div>
+        <div class="rec"><i class="bar" style="background:var(--tower)"></i><div><div class="k">タワー・水替え</div><div class="v">水を全部入れかえた</div></div><div class="act"><button onclick="openSheet('sheet-edit')">直す</button></div></div>
+      </div>
+      <button class="add" style="border-style:solid">もっと前を見る（50件ずつ）</button>
+    </section>
+
+    <!-- 予定 -->
+    <section class="view" id="v-plan" data-testid="view-plan">
+      <h2>今週・来週</h2>
+      <div class="card">
+        <div class="plan"><button class="chk" aria-label="済にする" onclick="this.closest('.plan').classList.toggle('done');toast('「済」にしました。知らせとカレンダーにも反映します')">✓</button><div><div class="pt">DWC：種まき ルッコラ</div><div class="pw">11月 上旬（〜11/10）</div></div><button class="edit" onclick="openPlan('11','上旬','dwc','種まき','ルッコラ')">直す</button></div>
+        <div class="plan"><button class="chk" aria-label="済にする" onclick="this.closest('.plan').classList.toggle('done')">✓</button><div><div class="pt">タワー：農薬 ゼンターリ</div><div class="pw">11月14日（土）</div></div><button class="edit" onclick="openPlan('11','2026-11-14','tower','農薬','ゼンターリ')">直す</button></div>
+      </div>
+      <button class="add" onclick="openPlan('','上旬','','','')">＋ 予定を足す</button>
+
+      <h2>この1年（月を押すと、その月の予定）</h2>
+      <div class="year" id="year"></div>
+      <p class="chartnote">点の色＝系統。予定は専用カレンダー「家庭菜園」にも入ります（学校の予定とは別）。</p>
+    </section>
+
+    <!-- 農薬 -->
+    <section class="view" id="v-pest" data-testid="view-pest">
+      <h2>農薬をうすめる</h2>
+      <div class="card">
+        <label class="f">くすり<select id="pest" onchange="pcalc()">
+          <option value="100|mL|0|">粘着くん液剤（100倍）</option>
+          <option value="500|mL|0|">サンヨール（500倍）</option>
+          <option value="1000|g|2|3">ゼンターリ顆粒水和剤（1000倍）</option>
+          <option value="2000|mL|1|2">プレバソンフロアブル5（2000倍）</option>
+        </select></label>
+        <div class="f" style="font-size:13px;color:var(--ink2);margin-top:12px">水の量</div>
+        <div class="litre" id="litre">
+          <button aria-pressed="false" onclick="pickL(this,1)">1 L</button><button aria-pressed="true" onclick="pickL(this,2)">2 L</button><button aria-pressed="false" onclick="pickL(this,3)">3 L</button><button aria-pressed="false" onclick="pickL(this,5)">5 L</button>
+        </div>
+        <div class="dose"><span>入れる量</span><b id="pdose">4.0</b><span id="punit">mL</span><small id="pf">水 2 L ÷ 500倍</small></div>
+        <div class="uses" id="uses">このくすりは上限回数が入っていません（スプレッドシートの「農薬一覧」タブで入れられます）</div>
+        <label class="f">どの系統にまく？<select><option>BatoBucket（スティックセニョール）</option><option>DWC（サンチュ・小松菜・ルッコラ）</option><option>タワー（スティックセニョール）</option></select></label>
+        <button class="save" onclick="toast('農薬の記録を保存しました（見返しの「農薬」で見られます）')">散布したので記録する</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="tabs" aria-label="画面の切りかえ">
+  <button aria-current="page" data-v="v-record" onclick="go(this)"><span class="ic">💧</span>記録<span class="badge">2</span></button>
+  <button data-v="v-history" onclick="go(this)"><span class="ic">📖</span>見返し</button>
+  <button data-v="v-plan" onclick="go(this)"><span class="ic">📅</span>予定</button>
+  <button data-v="v-pest" onclick="go(this)"><span class="ic">🧴</span>農薬</button>
+</nav>
+
+<div class="sheet-bg" id="bg" onclick="closeSheets()"></div>
+<div class="sheet" id="sheet-plan" role="dialog" aria-label="予定を直す">
+  <h3 id="plan-title">予定を直す</h3>
+  <div class="grid2">
+    <label class="f">月<select id="pm"><option value="">選ぶ</option></select></label>
+    <label class="f">いつ<select id="pt"><option>上旬</option><option>中旬</option><option>下旬</option><option value="date">日付で決める</option></select></label>
+  </div>
+  <div class="grid2">
+    <label class="f">系統<select id="ps"><option value="">全体</option><option value="bato">BatoBucket</option><option value="dwc">DWC</option><option value="tower">タワー</option></select></label>
+    <label class="f">作業<select id="pw"><option>追肥</option><option>水替え</option><option>農薬</option><option>種まき</option><option>植え付け</option><option>収穫</option><option>片付け</option><option>見直し</option><option>その他</option></select></label>
+  </div>
+  <label class="f">内容<input id="pd" placeholder="例 ルッコラ"></label>
+  <div class="row"><button class="btn-del" onclick="closeSheets();toast('予定を消しました')">消す</button><button class="btn-sub" onclick="closeSheets()">やめる</button><button class="btn-main" onclick="closeSheets();toast('予定を保存しました（カレンダーにも入れます）')">保存する</button></div>
+</div>
+<div class="sheet" id="sheet-edit" role="dialog" aria-label="記録を直す">
+  <h3>記録を直す</h3>
+  <p class="chartnote" style="margin:0">11月8日 BatoBucket・液肥（日付は変わりません）</p>
+  <div class="grid2"><label class="f">EC<input value="1.8" inputmode="decimal"></label><label class="f">追肥 mL<input value="75.2" inputmode="decimal"></label></div>
+  <label class="f">メモ<textarea>花蕾が見えはじめた</textarea></label>
+  <div class="row"><button class="btn-del" onclick="if(confirm('この記録を消しますか？（ほかの端末からも消えます）')){closeSheets();toast('記録を消しました')}">消す</button><button class="btn-sub" onclick="closeSheets()">やめる</button><button class="btn-main" onclick="closeSheets();toast('直した内容を保存しました')">保存する</button></div>
+</div>
+<div class="sheet" id="sheet-settings" role="dialog" aria-label="設定">
+  <h3>設定</h3>
+  <label class="f">送り先（GAS の URL）<input value="https://script.google.com/macros/s/…/exec"></label>
+  <p class="chartnote">目標EC・作物・知らせの間隔は、スプレッドシートの「設定」タブで直します（春の見直しは 3月上旬に予定済み）。</p>
+  <div class="row"><button class="btn-sub" onclick="toast('端末の中の記録を書き出しました（hydrodaily_控え.json）')">端末の記録を書き出す</button></div>
+  <div class="row"><button class="btn-main" onclick="closeSheets()">閉じる</button></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const SYS={bato:{name:'BatoBucket',target:2.0,tank:94,c:'#4E7D3A'},dwc:{name:'DWC',target:1.6,tank:140,c:'#7FA233'},tower:{name:'タワー',target:2.0,tank:19,c:'#47668F'}};
+let cur='bato',kind='液肥';
+function go(btn){document.querySelectorAll('nav.tabs button').forEach(b=>b.removeAttribute('aria-current'));btn.setAttribute('aria-current','page');document.querySelectorAll('section.view').forEach(s=>s.classList.remove('on'));document.getElementById(btn.dataset.v).classList.add('on');window.scrollTo(0,0)}
+function pickSys(k){cur=k;document.querySelectorAll('.sysbtn').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sys===k));document.getElementById('ec-target').textContent=SYS[k].target.toFixed(1);calc();label()}
+function pickKind(b){kind=b.dataset.kind;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));document.getElementById('ec-card').style.display=kind==='液肥'?'':'none';label()}
+function label(){const s=document.getElementById('save');s.textContent=SYS[cur].name+' の'+(kind==='日誌'?'日誌':kind)+'を記録する'}
+function step(d){const i=document.getElementById('ec-input');const v=Math.max(0,Math.round(((parseFloat(i.value)||SYS[cur].target)+d)*10)/10);i.value=v.toFixed(1);calc()}
+function calc(){const v=parseFloat(document.getElementById('ec-input').value);const t=SYS[cur].target;const ok=!isNaN(v);
+  document.getElementById('ec-now').textContent=ok?v.toFixed(1):'–';
+  document.getElementById('fill').style.width=(ok?Math.min(v,4)/4*100:0)+'%';
+  document.getElementById('tmark').style.left=(t/4*100)+'%';
+  const lock=ok&&v>=3.5;document.getElementById('warn').style.display=lock?'block':'none';document.getElementById('save').disabled=lock;
+  const d=ok?Math.max(0,t-v):0;document.getElementById('dose').textContent=ok&&v<t?(SYS[cur].tank*d*4).toFixed(1):(ok?'0（追肥不要）':'–');
+  document.getElementById('dose-f').textContent='満水 '+SYS[cur].tank+'L × 差 '+d.toFixed(1)+' × 4.0（自動給水なので常に満水）'}
+function save(){const s=document.getElementById('save');s.classList.add('sending');s.textContent='送っています…';setTimeout(()=>{s.classList.remove('sending');label();toast('シートに保存しました（11/8 '+SYS[cur].name+'）')},900)}
+function sendNow(){const el=document.getElementById('sync');el.classList.remove('wait');document.getElementById('sync-text').textContent='すべて送信済み（最後に送れた時刻 7:42）';el.querySelector('button').style.display='none';document.querySelector('.badge').style.display='none';toast('未送信の2件を送りました')}
+function pickL(b,l){document.querySelectorAll('#litre button').forEach(x=>x.setAttribute('aria-pressed',x===b));window._L=l;pcalc()}
+function pcalc(){const [dil,unit,used,max]=document.getElementById('pest').value.split('|');const L=window._L||2;const amt=L*1000/+dil;
+  document.getElementById('pdose').textContent=amt.toFixed(1);document.getElementById('punit').textContent=unit;document.getElementById('pf').textContent='水 '+L+' L ÷ '+dil+'倍';
+  const u=document.getElementById('uses');if(max){const over=+used>=+max;u.className='uses'+(over?' over':'');u.textContent=over?'今作はもう '+used+'回使いました（上限 '+max+'回）。このくすりは使えません':'今作は '+used+'回使いました（上限 '+max+'回まで）'}else{u.className='uses';u.textContent='このくすりは上限回数が入っていません（スプレッドシートの「農薬一覧」タブで入れられます）'}}
+function openSheet(id){document.getElementById('bg').style.display='block';document.getElementById(id).classList.add('on')}
+function closeSheets(){document.getElementById('bg').style.display='none';document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on'))}
+function openPlan(m,t,s,w,d){document.getElementById('plan-title').textContent=m?'予定を直す':'予定を足す';document.getElementById('pm').value=m;document.getElementById('pt').value=['上旬','中旬','下旬'].includes(t)?t:'date';document.getElementById('ps').value=s;if(w)document.getElementById('pw').value=w;document.getElementById('pd').value=d;openSheet('sheet-plan')}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(window._t);window._t=setTimeout(()=>t.style.display='none',2600)}
+(function(){const pm=document.getElementById('pm');const y=document.getElementById('year');const plans={11:['dwc','tower'],12:['bato'],1:['bato','tower'],2:['dwc'],3:['bato','dwc','tower']};
+  const months=[11,12,1,2,3,4,5,6,7,8,9,10];months.forEach((m,i)=>{const o=document.createElement('option');o.value=m;o.textContent=m+'月';pm.appendChild(o);
+    const b=document.createElement('button');b.className='mon'+(i===0?' now':'');const yr=m>=11?2026:2027;b.innerHTML='<b>'+m+'月</b>'+yr+'年<div class="dots">'+(plans[m]||[]).map(k=>'<i style="background:'+SYS[k].c+'"></i>').join('')+'</div>';
+    b.onclick=()=>toast(m+'月の予定を表示します（'+(plans[m]||[]).length+'件）');y.appendChild(b)});
+  calc();pcalc()})();
+</script>
+</body>
+</html>

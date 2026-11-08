@@ -1,1766 +1,976 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#047857">
-  <link rel="manifest" href="manifest.json">
-  <title>HydroDaily - 水耕栽培水質管理 &amp; 追肥日誌</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: { 50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857' }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    /* iOS / Mobile safe area & touch optimization */
-    body { -webkit-tap-highlight-color: transparent; }
-    .pb-safe { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
-    .aspect-square { aspect-ratio: 1 / 1; }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2F7D8C">
+<link rel="manifest" href="manifest.json">
+<title>HydroDaily</title>
+<!-- フォントは後から読む（電波が弱くても画面をすぐ出す） -->
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<style>
+:root{
+  --mist:#F3F7F5; --paper:#FFFFFF; --ink:#1D2B2A; --ink2:#53625F; --line:#D5E0DC;
+  --water:#2F7D8C; --water-soft:#DCEEF1;
+  --bato:#4E7D3A; --dwc:#7FA233; --tower:#47668F; --all:#8A9794;
+  --due:#B7791F; --due-soft:#FBF1DC; --stop:#B42318; --stop-soft:#FDE7E4; --ok:#2E7D4F;
+  --r-lg:18px; --r-md:12px; --r-sm:8px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--mist);color:var(--ink);font-family:"BIZ UDPGothic",system-ui,sans-serif;font-size:16px;line-height:1.6;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:96px}
+header{display:flex;align-items:center;gap:10px;padding:12px 16px 8px}
+header h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.02em}
+header .ver{font-size:12px;color:var(--ink2)}
+.iconbtn{margin-left:auto;width:48px;height:48px;border:0;background:transparent;border-radius:50%;font-size:22px;cursor:pointer}
+.sync{margin:0 16px 12px;display:flex;align-items:center;gap:8px;font-size:14px;padding:8px 12px;border-radius:var(--r-md);background:var(--paper);border:1px solid var(--line);min-height:48px}
+.sync .dot{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.sync.wait{background:var(--due-soft);border-color:#EBCB8B}
+.sync.wait .dot{background:var(--due)}
+.sync.err{background:var(--stop-soft);border-color:#F1B5AC}
+.sync.err .dot{background:var(--stop)}
+.sync button{margin-left:auto;flex:none;white-space:nowrap;min-height:44px;padding:0 14px;border-radius:var(--r-sm);border:1px solid var(--due);background:#fff;color:var(--due);font-weight:700;cursor:pointer}
+main{padding:0 16px}
+section.view{display:none}
+section.view.on{display:block}
+h2{font-size:17px;margin:20px 0 8px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px}
+.today{border-left:6px solid var(--due)}
+.today h2{margin:0 0 6px}
+.task{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.task:first-child{border-top:0}
+.task .sys{flex:none;width:8px;height:36px;border-radius:4px;margin-top:2px}
+.task .t{font-weight:700}
+.task .d{font-size:13px;color:var(--ink2)}
+.task button{margin-left:auto;flex:none;min-height:44px;min-width:64px;border-radius:var(--r-sm);border:1px solid var(--line);background:#fff;font-weight:700;cursor:pointer}
+.empty{color:var(--ink2);font-size:14px;padding:6px 0}
+.systems{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.sysbtn{min-height:64px;border-radius:var(--r-md);border:2px solid var(--line);background:#fff;text-align:left;padding:8px 10px;cursor:pointer;min-width:0}
+.sysbtn b{display:block;font-size:14px;overflow-wrap:anywhere;line-height:1.3}
+.sysbtn span{display:block;font-size:12px;color:var(--ink2);line-height:1.3}
+.sysbtn[aria-pressed=true]{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,#fff);box-shadow:inset 0 -4px 0 var(--c)}
+.seg{display:flex;background:var(--water-soft);border-radius:var(--r-md);padding:4px;gap:4px;margin:12px 0}
+.seg button{flex:1;min-height:44px;border:0;border-radius:var(--r-sm);background:transparent;font-weight:700;cursor:pointer;color:var(--ink2)}
+.seg button[aria-pressed=true]{background:#fff;color:var(--water);box-shadow:0 1px 0 var(--line)}
+.gauge .nums{display:flex;align-items:baseline;gap:10px;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.gauge .now{font-size:56px;font-weight:700;line-height:1;color:var(--water)}
+.gauge .to{font-size:15px;color:var(--ink2)}
+.tank{position:relative;height:28px;border-radius:14px;background:#EEF4F2;border:1px solid var(--line);overflow:hidden;margin-top:10px}
+.tank .fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(180deg,#5FA7B4,var(--water));transition:width .25s ease}
+.tank .target{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--ink)}
+.tank .lock{position:absolute;top:0;bottom:0;right:0;width:12.5%;background:repeating-linear-gradient(135deg,#F6D2CC 0 6px,#FBE6E2 6px 12px)}
+.scale{display:flex;justify-content:space-between;font-size:11px;color:var(--ink2);margin-top:2px;font-variant-numeric:tabular-nums}
+.stepper{display:grid;grid-template-columns:64px 1fr 64px;gap:8px;margin-top:12px}
+.stepper button{min-height:56px;border-radius:var(--r-md);border:1px solid var(--line);background:#fff;font-size:24px;font-weight:700;cursor:pointer}
+.stepper input{min-width:0;width:100%;min-height:56px;border-radius:var(--r-md);border:2px solid var(--water);text-align:center;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.dose{margin-top:14px;padding:14px;border-radius:var(--r-md);background:var(--water-soft);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.dose b{font-size:34px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.dose small{color:var(--ink2);width:100%;font-size:12px}
+.warn{margin-top:10px;padding:10px 12px;border-radius:var(--r-md);background:var(--stop-soft);color:var(--stop);font-size:14px;font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+label.f{display:block;font-size:13px;color:var(--ink2);margin-top:12px}
+label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:4px;min-height:48px;border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 12px;background:#fff;min-width:0}
+textarea{min-height:88px!important;resize:vertical}
+details>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--ink2);font-size:14px}
+.photos{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.photos .pick{width:64px;height:64px;border-radius:var(--r-md);border:2px dashed var(--line);background:#fff;font-size:22px;cursor:pointer}
+.thumb{position:relative;width:64px;height:64px}
+.thumb img{width:64px;height:64px;object-fit:cover;border-radius:var(--r-md);border:1px solid var(--line)}
+.thumb button{position:absolute;top:-8px;right:-8px;width:44px;height:44px;border-radius:50%;border:0;background:transparent;cursor:pointer;padding:0}
+.thumb button span{display:inline-block;width:24px;height:24px;line-height:24px;border-radius:50%;background:var(--ink);color:#fff;font-size:13px}
+.save{display:block;width:100%;min-height:60px;margin-top:16px;border:0;border-radius:var(--r-md);background:var(--water);color:#fff;font-size:18px;font-weight:700;cursor:pointer}
+.save:disabled{background:#9DB7BC;cursor:not-allowed}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.chip{min-height:44px;padding:0 14px;border-radius:22px;border:1px solid var(--line);background:#fff;font-size:14px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chart{width:100%;height:auto;display:block}
+.chartnote{font-size:12px;color:var(--ink2);margin-top:4px}
+.day{margin-top:14px}
+.day .dh{font-size:13px;color:var(--ink2);font-weight:700;margin-bottom:4px}
+.rec{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin-bottom:6px}
+.rec .bar{width:6px;align-self:stretch;border-radius:3px;flex:none}
+.rec .body{min-width:0;flex:1}
+.rec .k{font-size:12px;font-weight:700;color:var(--ink2)}
+.rec .v{font-weight:700;font-variant-numeric:tabular-nums}
+.rec .m{font-size:14px;white-space:pre-wrap;word-break:break-word}
+.rec .ph{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.rec .ph img{width:56px;height:56px;object-fit:cover;border-radius:var(--r-sm);border:1px solid var(--line)}
+.rec .act button{min-width:56px;min-height:44px;border-radius:var(--r-sm);border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer}
+.pend{font-size:11px;color:var(--due);font-weight:700}
+.plan{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.plan:first-child{border-top:0}
+.plan .chk{width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:#fff;flex:none;font-size:20px;cursor:pointer}
+.plan.done .chk{background:var(--ok);border-color:var(--ok);color:#fff}
+.plan.done .pt{text-decoration:line-through;color:var(--ink2)}
+.plan.late .pw{color:var(--stop);font-weight:700}
+.plan .pt{font-weight:700}
+.plan .pw{font-size:13px;color:var(--ink2)}
+.plan .info{min-width:0;flex:1}
+.plan .btns{display:flex;gap:6px;flex:none}
+.plan .btns button{min-height:44px;min-width:56px;border-radius:var(--r-sm);border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:700}
+.plan .btns button.adopt{background:var(--water);border-color:var(--water);color:#fff}
+.proposal{border-left:6px solid var(--water)}
+.year{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mon{min-height:76px;border:1px solid var(--line);border-radius:var(--r-md);background:#fff;padding:6px 8px;text-align:left;cursor:pointer;font-size:12px;min-width:0}
+.mon b{display:block;font-size:15px}
+.mon.now{border:2px solid var(--water)}
+.mon[aria-pressed=true]{background:var(--water-soft)}
+.mon .dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+.mon .dots i{width:9px;height:9px;border-radius:50%}
+.add{width:100%;min-height:52px;margin-top:12px;border-radius:var(--r-md);border:2px dashed var(--water);background:#fff;color:var(--water);font-weight:700;cursor:pointer}
+.litre{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.litre button{flex:1;min-width:56px;min-height:48px;border-radius:var(--r-sm);border:1px solid var(--line);background:#fff;font-weight:700;cursor:pointer}
+.litre button[aria-pressed=true]{border:2px solid var(--water);color:var(--water)}
+.uses{margin-top:10px;font-size:14px;padding:10px 12px;border-radius:var(--r-md);background:#F4F7F6}
+.uses.over{background:var(--stop-soft);color:var(--stop);font-weight:700}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+nav.tabs button{min-height:68px;border:0;background:transparent;font-size:13px;font-weight:700;color:var(--ink2);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
+nav.tabs .ic{font-size:22px;line-height:1}
+nav.tabs button[aria-current=page]{color:var(--water)}
+nav.tabs button[aria-current=page]::before{content:"";position:absolute;top:0;left:22%;right:22%;height:4px;border-radius:0 0 4px 4px;background:var(--water)}
+nav.tabs .badge{position:absolute;top:8px;right:calc(50% - 22px);min-width:18px;height:18px;border-radius:9px;background:var(--due);color:#fff;font-size:11px;line-height:18px;padding:0 4px}
+@media (min-width:521px){nav.tabs{max-width:520px;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}}
+.sheet-bg{position:fixed;inset:0;background:rgba(29,43,42,.45);display:none;z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:#fff;border-radius:22px 22px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));z-index:21;transform:translateY(105%);visibility:hidden;transition:transform .22s ease,visibility 0s .22s;max-height:88vh;overflow:auto}
+.sheet.on{transform:none;visibility:visible;transition:transform .22s ease}
+.sheet h3{margin:0 0 4px;font-size:18px}
+.sheet .row{display:flex;gap:8px;margin-top:16px}
+.sheet .row button,.sheet .row a{flex:1;min-height:52px;border-radius:var(--r-md);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;color:inherit}
+.btn-sub{border:1px solid var(--line);background:#fff}
+.btn-main{border:0;background:var(--water);color:#fff!important}
+.btn-del{border:1px solid var(--stop);background:#fff;color:var(--stop)!important;flex:0 0 96px!important}
+.toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:var(--r-md);font-size:14px;z-index:30;max-width:90vw}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid #F2B705;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col font-sans antialiased pb-20 md:pb-6">
-
-  <!-- Header -->
-  <header class="bg-white border-b sticky top-0 z-30 shadow-sm">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center space-x-2">
-        <span class="text-2xl">🌱</span>
-        <div>
-          <h1 class="font-bold text-lg leading-tight flex items-center gap-1.5">
-            HydroDaily
-            <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">v1.9</span>
-          </h1>
-          <p class="text-xs text-gray-500" id="today-date-display">2026年10月4日 (日)</p>
-        </div>
-      </div>
-      <div class="flex items-center space-x-2">
-        <a href="dashboard.html" id="btn-goto-dashboard" class="flex items-center space-x-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold border border-emerald-300 transition" title="10年日記・年次比較ダッシュボードを開く">
-          <span>📊</span>
-          <span>10年日記</span>
-        </a>
-        <button onclick="openSettingsModal()" data-testid="btn-settings" class="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition" title="Google連携設定">
-          ⚙️
-        </button>
-      </div>
-    </div>
-
-    <!-- Navigation Tabs (5 Tabs) -->
-    <div class="max-w-5xl mx-auto px-2 overflow-x-auto no-scrollbar flex space-x-1 border-t bg-gray-50/50">
-      <button onclick="switchTab('record')" id="tab-btn-record" data-testid="mode-fertilizer" class="tab-btn px-3.5 py-2.5 text-sm font-bold border-b-2 border-emerald-600 text-emerald-600 flex items-center gap-1.5 whitespace-nowrap">
-        <span>💧</span> 記録
-      </button>
-      <button onclick="switchTab('plan')" id="tab-btn-plan" class="tab-btn px-3.5 py-2.5 text-sm font-semibold text-gray-600 hover:text-emerald-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
-        <span>📅</span> プラン
-      </button>
-      <button onclick="switchTab('gallery')" id="tab-btn-gallery" class="tab-btn px-3.5 py-2.5 text-sm font-semibold text-gray-600 hover:text-emerald-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
-        <span>📸</span> 写真
-      </button>
-      <button onclick="switchTab('timeline')" id="tab-btn-timeline" class="tab-btn px-3.5 py-2.5 text-sm font-semibold text-gray-600 hover:text-emerald-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
-        <span>📜</span> タイムライン
-      </button>
-      <button onclick="switchTab('pesticide')" id="tab-btn-pesticide" data-testid="mode-pesticide" class="tab-btn px-3.5 py-2.5 text-sm font-semibold text-gray-600 hover:text-emerald-600 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
-        <span>🧪</span> 農薬電卓
-      </button>
-    </div>
+<body>
+<div class="app">
+  <header>
+    <h1>HydroDaily</h1><span class="ver" id="ver">v2.0.0</span>
+    <button class="iconbtn" id="btn-settings" aria-label="設定" onclick="openSettings()">⚙️</button>
   </header>
+  <div class="sync" id="sync-bar" data-testid="sync-bar">
+    <span class="dot"></span><span id="sync-text">すべて送信済み</span>
+    <button id="btn-send-now" hidden onclick="flush(true)">いま送る</button>
+  </div>
 
-  <!-- Main Container -->
-  <main class="max-w-5xl mx-auto w-full px-4 py-5 flex-1 space-y-4">
-
-    <!-- 隠しファイルインプット（OS標準のギャラリー / カメラ直結） -->
-    <input type="file" id="input-gallery-pick" accept="image/*" multiple class="hidden" onchange="handleGallerySelected(this)">
-    <input type="file" id="input-camera-capture" accept="image/*" capture="environment" class="hidden" onchange="handleGallerySelected(this)">
-    <input type="file" id="input-record-gallery" accept="image/*" multiple class="hidden" onchange="handleRecordPhotoSelected(this)">
-    <input type="file" id="input-record-camera" accept="image/*" capture="environment" class="hidden" onchange="handleRecordPhotoSelected(this)">
-
-    <!-- 10年日記再現：上部クイック投稿ボタン（写真 / カメラ / 文字） -->
-    <div class="bg-white p-4 rounded-2xl border shadow-sm">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-bold text-gray-500">2026年 日曜日 277/365</span>
-        <span class="text-xs text-emerald-600 font-semibold">ワンタップで新しい日誌を書く</span>
-      </div>
-      <div class="grid grid-cols-3 gap-2">
-        <button onclick="triggerGalleryPick()" id="btn-quick-gallery" class="py-3 px-2 rounded-2xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 flex flex-col items-center justify-center gap-1 font-bold text-xs transition shadow-sm active:scale-95">
-          <span class="text-2xl">🖼️</span>
-          <span>写真から書く</span>
-        </button>
-        <button onclick="triggerCameraCapture()" id="btn-quick-camera" class="py-3 px-2 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 flex flex-col items-center justify-center gap-1 font-bold text-xs transition shadow-sm active:scale-95">
-          <span class="text-2xl">📸</span>
-          <span>カメラで撮る</span>
-        </button>
-        <button onclick="openEditorWithText()" id="btn-quick-pen" class="py-3 px-2 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 flex flex-col items-center justify-center gap-1 font-bold text-xs transition shadow-sm active:scale-95">
-          <span class="text-2xl">✏️</span>
-          <span>文字から書く</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- TAB 1: 記録画面 (#view-record) -->
-    <section id="view-record" class="tab-view block space-y-4">
-      <!-- System Selector -->
-      <div class="bg-white p-3 rounded-xl border shadow-sm">
-        <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">リザーバー系統セレクター（本日の記録状況）</label>
-        <div class="grid grid-cols-3 gap-2">
-          <button data-testid="tab-bato" onclick="selectSystem('bato')" id="tab-bato" class="py-2.5 px-2 rounded-lg text-center font-bold text-xs sm:text-sm bg-emerald-600 text-white shadow-sm flex flex-col items-center justify-center transition">
-            <span>BatoBucket</span>
-            <span class="text-[10px] opacity-90">94L・秋ナス/セニョール</span>
-            <span id="tab-bato-status" class="mt-1 bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full">⏳ 未記録</span>
-          </button>
-          <button data-testid="tab-dwc" onclick="selectSystem('dwc')" id="tab-dwc" class="py-2.5 px-2 rounded-lg text-center font-bold text-xs sm:text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 flex flex-col items-center justify-center transition">
-            <span>DWC / NFT</span>
-            <span class="text-[10px] text-gray-500">140L・葉物野菜</span>
-            <span id="tab-dwc-status" class="mt-1 bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full">⏳ 未記録</span>
-          </button>
-          <button data-testid="tab-tower" onclick="selectSystem('tower')" id="tab-tower" class="py-2.5 px-2 rounded-lg text-center font-bold text-xs sm:text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 flex flex-col items-center justify-center transition">
-            <span>タワー型</span>
-            <span class="text-[10px] text-gray-500">19L・ミニトマト</span>
-            <span id="tab-tower-status" class="mt-1 bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full">⏳ 未記録</span>
-          </button>
-        </div>
+  <main>
+    <!-- 記録 -->
+    <section class="view on" id="v-record">
+      <div class="card today">
+        <h2>今日やること</h2>
+        <div id="today-list"></div>
       </div>
 
-      <!-- Quick EC Input & Calculator Card -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 space-y-4">
-        <div class="flex items-center justify-between pb-2 border-b">
-          <div>
-            <span id="current-system-name" class="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">BatoBucket</span>
-            <h2 id="current-crop-name" class="text-base font-bold text-slate-800 mt-1">スティックセニョール・秋ナス</h2>
-          </div>
-          <div class="text-right">
-            <span class="text-xs text-slate-400 block font-medium">目標EC</span>
-            <span id="target-ec-display" class="text-xl font-black text-emerald-700">2.2 <span class="text-xs font-normal text-slate-500">mS/cm</span></span>
-          </div>
-        </div>
+      <h2>どの系統？</h2>
+      <div class="systems" id="systems" role="group" aria-label="系統"></div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">現在実測EC (mS/cm)</label>
-            <input type="number" step="0.1" id="input-current-ec" data-testid="input-current-ec" placeholder="例: 1.8"
-              class="w-full text-3xl font-black text-slate-800 bg-slate-50 rounded-xl px-4 py-3 border-2 border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none transition text-center"
-              oninput="handleEcInput(this.value)">
-          </div>
-
-          <!-- Quick EC Increment / Keypad helpers -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">EC クイック調整</label>
-            <div class="grid grid-cols-4 gap-2">
-              <button onclick="adjustEc(-0.1)" class="py-3 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-lg text-xs font-bold text-slate-700 transition">-0.1</button>
-              <button onclick="adjustEc(0.1)" class="py-3 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-lg text-xs font-bold text-slate-700 transition">+0.1</button>
-              <button onclick="setEcPreset(1.5)" class="py-3 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-lg text-xs font-bold text-slate-700 transition">1.5</button>
-              <button onclick="setEcPreset(2.0)" class="py-3 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-lg text-xs font-bold text-slate-700 transition">2.0</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Safety Warning Box -->
-        <div id="warning-box" data-testid="warning-box" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-start space-x-2">
-          <span class="text-lg">⚠️</span>
-          <div class="text-xs leading-relaxed font-semibold">
-            異常値の可能性があります (0.5以下 または 3.5以上)。センサー校正または数値を再確認してください。保存は安全のためロックされています。
-          </div>
-        </div>
-
-        <!-- Fertilizer Dosage Result -->
-        <div class="border border-emerald-200 bg-emerald-50/60 rounded-xl p-4 text-center">
-          <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">OATハウス 原液追肥量 (A液/B液 各)</span>
-          <div class="mt-1 flex items-baseline justify-center space-x-1">
-            <span id="display-added-ml" data-testid="display-added-ml" class="text-4xl font-black text-emerald-700">0.0</span>
-            <span class="text-base font-bold text-emerald-800">mL</span>
-          </div>
-          <p id="calc-formula-desc" data-testid="calc-formula-desc" class="text-[11px] text-slate-400 mt-1">水道満水(94L) ✕ 差分EC ✕ 4.0</p>
-        </div>
-
-        <!-- Observation Inputs -->
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">水温 (°C)</label>
-            <input type="number" step="0.5" id="input-temp" data-testid="input-temp" placeholder="22.5" class="w-full py-2 px-3 border rounded-lg bg-gray-50" oninput="saveDraft()">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">pH</label>
-            <input type="number" step="0.1" id="input-ph" data-testid="input-ph" placeholder="6.2" class="w-full py-2 px-3 border rounded-lg bg-gray-50" oninput="saveDraft()">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">観察メモ（生育・害虫・異常）</label>
-          <textarea id="input-memo" data-testid="input-memo" rows="2" placeholder="例: 花蕾が肥大中。下葉にうどんこ病の兆候なし。"
-            class="w-full text-sm text-slate-800 bg-slate-50 rounded-xl px-3 py-2 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none resize-none"
-            oninput="saveDraft()"></textarea>
-        </div>
-
-        <!-- Photo Attachments -->
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="block text-[11px] font-semibold text-slate-500">現場写真（最大5枚・自動圧縮）</label>
-            <span id="photo-count-badge" class="text-xs text-slate-400 font-medium">0 / 5枚</span>
-          </div>
-          <div class="flex items-center space-x-2">
-            <button type="button" id="btn-record-add-photo" onclick="openPhotoPickerSheet('record')"
-              class="cursor-pointer flex items-center justify-center px-4 py-2 border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl text-xs font-bold text-slate-600 hover:text-emerald-700 bg-slate-50 hover:bg-emerald-50/30 transition">
-              <span>📷 写真を追加</span>
-            </button>
-            <input type="file" id="input-photos" accept="image/*" multiple class="hidden" onchange="handlePhotoUpload(this)">
-            <span class="text-[11px] text-slate-400">カメラまたはアルバムを選択</span>
-          </div>
-          <div id="photo-preview-grid" class="grid grid-cols-5 gap-2 mt-2"></div>
-        </div>
-
-        <!-- Save Button -->
-        <button id="btn-save" data-testid="btn-save" onclick="saveRecord()"
-          class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold text-base rounded-xl shadow-md transition flex items-center justify-center space-x-2">
-          <span id="btn-save-text">💾 記録をGoogleシートに保存</span>
-          <div id="save-spinner" data-testid="save-spinner" class="hidden">
-            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-            </svg>
-          </div>
-        </button>
+      <div class="seg" role="group" aria-label="記録の種類">
+        <button aria-pressed="true" data-kind="液肥" onclick="pickKind('液肥')">液肥</button>
+        <button aria-pressed="false" data-kind="水替え" onclick="pickKind('水替え')">水替え</button>
+        <button aria-pressed="false" data-kind="日誌" onclick="pickKind('日誌')">日誌だけ</button>
       </div>
 
-      <!-- 10年日記カード -->
-      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center space-x-2">
-            <span class="text-base">📖</span>
-            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">10年日記（過去同月同日 ±7日）</h3>
-          </div>
-          <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">知見共有</span>
+      <div class="card" id="ec-card">
+        <div class="gauge">
+          <div class="nums"><span class="now" id="ec-now">–</span><span class="to">→ 目標 <b id="ec-target">2.0</b> mS/cm</span></div>
+          <div class="tank" aria-hidden="true"><div class="lock"></div><div class="fill" id="fill"></div><div class="target" id="tmark"></div></div>
+          <div class="scale"><span>0</span><span>1.0</span><span>2.0</span><span>3.0</span><span>4.0</span></div>
         </div>
-        <div id="diary-list" class="space-y-3">
-          <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-            <div class="flex justify-between items-center text-slate-500 text-[11px] mb-1">
-              <span class="font-bold text-emerald-800">2025年10月02日 (1年前)</span>
-              <span>BatoBucket</span>
-            </div>
-            <div class="font-semibold text-slate-700">EC 1.9 ➔ A/B液 各112.8mL 追肥</div>
-            <p class="text-slate-600 mt-1">定植完了。根の活着が良好。気温低下に伴い水温19℃安定。</p>
-          </div>
+        <div class="stepper">
+          <button aria-label="0.1 下げる" onclick="stepEc(-0.1)">−</button>
+          <input id="ec-input" inputmode="decimal" placeholder="今のEC" aria-label="今のEC" oninput="calc()">
+          <button aria-label="0.1 上げる" onclick="stepEc(0.1)">＋</button>
         </div>
+        <div class="dose" id="dose-box"><span>A液・B液 それぞれ</span><b id="dose">–</b><span>mL</span><small id="dose-f"></small></div>
+        <div class="warn" id="warn" hidden>3.5 以上は測りまちがいの心配があるので保存できません。センサーを確かめてください。</div>
       </div>
+      <details id="more" style="margin-top:6px"><summary>pH・水温も入れる</summary>
+        <div class="grid2"><label class="f">pH<input id="input-ph" inputmode="decimal" placeholder="例 6.2"></label><label class="f">水温 ℃<input id="input-temp" inputmode="decimal" placeholder="例 14"></label></div>
+      </details>
+
+      <label class="f">メモ<textarea id="input-memo" placeholder="気づいたこと（なくてもよい）"></textarea></label>
+      <div class="photos" id="photo-tray">
+        <button class="pick" aria-label="カメラで撮る" onclick="document.getElementById('cam').click()">📷</button>
+        <button class="pick" aria-label="写真を選ぶ" onclick="document.getElementById('gal').click()">🖼️</button>
+      </div>
+      <input type="file" id="cam" accept="image/*" capture="environment" hidden onchange="addPhotos(this)">
+      <input type="file" id="gal" accept="image/*" multiple hidden onchange="addPhotos(this)">
+      <button class="save" id="btn-save" onclick="saveRecord()">記録する</button>
     </section>
 
-    <!-- TAB 2: 年間プランボード (#view-plan) -->
-    <section id="view-plan" class="tab-view hidden space-y-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-xl font-bold flex items-center gap-2">
-            <span>📅</span> 年間栽培プラン
-          </h2>
-          <p class="text-xs text-gray-500">過去実績を参照しながら未来の作業計画を立てる</p>
-        </div>
-        <button onclick="openPlanEditor('2027', '10')" class="text-xs bg-rose-500 hover:bg-rose-600 text-white font-bold px-3 py-1.5 rounded-full shadow-sm transition flex items-center gap-1">
-          <span>＋</span> 計画を追加
-        </button>
+    <!-- 見返し -->
+    <section class="view" id="v-history">
+      <h2>見返す</h2>
+      <div class="chips" id="filter-sys" role="group" aria-label="系統でしぼる"></div>
+      <div class="chips" id="filter-kind" role="group" aria-label="種類でしぼる"></div>
+      <div class="card" style="margin-top:10px">
+        <div style="font-weight:700;font-size:15px">ECの移り変わり（この30日）</div>
+        <div id="chart-box"></div>
       </div>
-
-      <!-- 2027年 プランカード -->
-      <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
-        <div class="flex items-center justify-between border-b pb-2">
-          <h3 class="text-2xl font-black text-gray-900">2027</h3>
-          <span class="text-xs bg-gray-100 text-gray-600 font-semibold px-2 py-0.5 rounded">来期計画</span>
-        </div>
-        <div class="grid grid-cols-3 gap-3 text-xs">
-          <div onclick="openPlanEditor('2027', '12')" class="p-2.5 rounded-xl border bg-gray-50/50 hover:bg-gray-100 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-700 block mb-1">12月</span>
-          </div>
-          <div onclick="openPlanEditor('2027', '11')" class="p-2.5 rounded-xl border bg-gray-50/50 hover:bg-gray-100 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-700 block mb-1">11月</span>
-          </div>
-          <div onclick="openPlanEditor('2027', '10')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">10月</span>
-            <p class="text-gray-700 leading-snug">中旬 スナックエンドウの種まき</p>
-          </div>
-
-          <div onclick="openPlanEditor('2027', '9')" class="p-2.5 rounded-xl border bg-gray-50/50 hover:bg-gray-100 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-700 block mb-1">9月</span>
-          </div>
-          <div onclick="openPlanEditor('2027', '8')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">8月</span>
-            <p class="text-gray-700 leading-snug">上旬、ピーマンの切り戻し<br>PC 筑陽はそのままでよい。夏も収穫でき...</p>
-          </div>
-          <div onclick="openPlanEditor('2027', '7')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">7月</span>
-            <p class="text-gray-700 leading-snug">上旬 トマトの脇芽から秋トマトの苗作り<br>中旬...</p>
-          </div>
-
-          <div onclick="openPlanEditor('2027', '6')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">6月</span>
-            <p class="text-gray-700 leading-snug">6月初旬、気温が30℃を超えるようになったら、遮光ネットを張る。</p>
-          </div>
-          <div onclick="openPlanEditor('2027', '5')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">5月</span>
-            <p class="text-gray-700 leading-snug">中旬<br>モロッコ種まき<br>ササゲ種まき</p>
-          </div>
-          <div onclick="openPlanEditor('2027', '4')" class="p-2.5 rounded-xl border bg-gray-50/50 hover:bg-gray-100 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-700 block mb-1">4月</span>
-          </div>
-
-          <div onclick="openPlanEditor('2027', '3')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">3月</span>
-            <p class="text-gray-700 leading-snug">上旬<br>ツルありインゲン種まき</p>
-          </div>
-          <div onclick="openPlanEditor('2027', '2')" class="p-2.5 rounded-xl border bg-gray-50/50 hover:bg-gray-100 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-700 block mb-1">2月</span>
-          </div>
-          <div onclick="openPlanEditor('2027', '1')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">1月</span>
-            <p class="text-gray-700 leading-snug">上旬<br>トマトの苗作り<br>ゲラニウムキスとミニキャロル。</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2026年 プランカード -->
-      <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
-        <div class="flex items-center justify-between border-b pb-2">
-          <h3 class="text-2xl font-black text-gray-900">2026</h3>
-          <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">今期実績・計画</span>
-        </div>
-        <div class="grid grid-cols-3 gap-3 text-xs">
-          <div onclick="openPlanEditor('2026', '12')" class="p-2.5 rounded-xl border bg-gray-50/50 hover:bg-gray-100 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-700 block mb-1">12月</span>
-          </div>
-          <div onclick="openPlanEditor('2026', '11')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">11月</span>
-            <p class="text-gray-700 leading-snug">中旬スナックエンドウ植え付け&amp;ツルなしインゲン撤収</p>
-          </div>
-          <div onclick="openPlanEditor('2026', '10')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">10月</span>
-            <p class="text-gray-700 leading-snug">中旬<br>スナックエンドウ 種まき</p>
-          </div>
-
-          <div onclick="openPlanEditor('2026', '9')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">9月</span>
-            <p class="text-gray-700 leading-snug">スティックセニョールをbato bucketに植え付け...</p>
-          </div>
-          <div onclick="openPlanEditor('2026', '8')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">8月</span>
-            <p class="text-gray-700 leading-snug">サンチュ種まき<br>肥料は500（カルシウム...</p>
-          </div>
-          <div onclick="openPlanEditor('2026', '7')" class="p-2.5 rounded-xl border bg-emerald-50/40 border-emerald-200 hover:bg-emerald-50 cursor-pointer min-h-[90px] transition">
-            <span class="font-bold text-gray-900 block mb-1">7月</span>
-            <p class="text-gray-700 leading-snug">梅雨明けから、OATハウス2号葉面散布...</p>
-          </div>
-        </div>
-      </div>
+      <div id="history-list"></div>
+      <p class="empty" id="history-empty" hidden>まだ記録がありません。「記録」から入れると、ここで見返せます。</p>
+      <button class="add" id="btn-more" style="border-style:solid" hidden onclick="historyLimit+=50;renderHistory()">もっと前を見る（50件ずつ）</button>
     </section>
 
-    <!-- TAB 3: 写真ギャラリー (#view-gallery) -->
-    <section id="view-gallery" class="tab-view hidden space-y-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-xl font-bold flex items-center gap-2">
-            <span>📸</span> 栽培写真ギャラリー
-          </h2>
-          <p class="text-xs text-gray-500">年月別アーカイブ・撮影日バッジ付き</p>
-        </div>
-        <div class="text-xs text-gray-500 bg-white px-2.5 py-1 rounded-full border shadow-sm">
-          全 <span class="font-bold text-gray-800" id="gallery-count">8</span> 枚の写真
-        </div>
+    <!-- 予定 -->
+    <section class="view" id="v-plan">
+      <div id="proposal-box" hidden>
+        <h2>AIからの提案（採用すると知らせ・カレンダーに入ります）</h2>
+        <div class="card proposal" id="proposal-list"></div>
       </div>
-
-      <div class="space-y-3">
-        <div class="flex items-center justify-between border-b pb-1">
-          <h3 class="font-black text-base text-gray-800 gallery-month-header">2026年9月</h3>
-          <span class="text-xs font-medium text-gray-500">2枚</span>
-        </div>
-        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
-          <div onclick="openLightbox(0)" class="gallery-item group relative aspect-square rounded-xl overflow-hidden bg-gray-200 cursor-pointer shadow-sm hover:shadow-md transition">
-            <img src="https://images.unsplash.com/photo-1592417817098-8f3d6910985c?w=500&auto=format&fit=crop&q=80" alt="ナス収穫" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-            <span class="date-badge absolute bottom-1.5 right-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-black px-1.5 py-0.5 rounded">27</span>
-          </div>
-          <div onclick="openLightbox(1)" class="gallery-item group relative aspect-square rounded-xl overflow-hidden bg-gray-200 cursor-pointer shadow-sm hover:shadow-md transition">
-            <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500&auto=format&fit=crop&q=80" alt="サンチュ小松菜" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-            <span class="date-badge absolute bottom-1.5 right-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-black px-1.5 py-0.5 rounded">15</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="space-y-3">
-        <div class="flex items-center justify-between border-b pb-1">
-          <h3 class="font-black text-base text-gray-800 gallery-month-header">2026年8月</h3>
-          <span class="text-xs font-medium text-gray-500">3枚</span>
-        </div>
-        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
-          <div onclick="openLightbox(2)" class="gallery-item group relative aspect-square rounded-xl overflow-hidden bg-gray-200 cursor-pointer shadow-sm hover:shadow-md transition">
-            <img src="https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=500&auto=format&fit=crop&q=80" alt="PC筑陽ナス" class="w-full h-tull object-cover group-hover:scale-105 transition duration-300">
-            <span class="date-badge absolute bottom-1.5 right-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-black px-1.5 py-0.5 rounded">25</span>
-          </div>
-          <div onclick="openLightbox(3)" class="gallery-item group relative aspect-square rounded-xl overflow-hidden bg-gray-200 cursor-pointer shadow-sm hover:shadow-md transition">
-            <img src="https://images.unsplash.com/photo-1563514227147-6d2ff665a6a0?w=500&auto=format&fit=crop&q=80" alt="ツルムラサキ" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-            <span class="date-badge absolute bottom-1.5 right-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-black px-1.5 py-0.5 rounded">24</span>
-          </div>
-          <div onclick="openLightbox(4)" class="gallery-item group relative aspect-square rounded-xl overflow-hidden bg-gray-200 cursor-pointer shadow-sm hover:shadow-md transition">
-            <img src="https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=500&auto=format&fit=crop&q=80" alt="モロヘイヤ" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-            <span class="date-badge absolute bottom-1.5 right-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-black px-1.5 py-0.5 rounded">05</span>
-          </div>
-        </div>
-      </div>
+      <h2>今週・来週</h2>
+      <div class="card"><div id="near-list"></div><p class="empty" id="near-empty" hidden>この2週間の予定はありません。</p></div>
+      <button class="add" id="btn-plan-add" onclick="openPlan(null)">＋ 予定を足す</button>
+      <h2>この1年（月を押すと、その月の予定）</h2>
+      <div class="year" id="year-grid"></div>
+      <div id="month-box" hidden><h2 id="month-title"></h2><div class="card"><div id="month-list"></div></div></div>
+      <p class="chartnote">点の色＝系統。予定は専用カレンダー「家庭菜園」にも入ります（学校の予定とは別）。</p>
     </section>
 
-    <!-- TAB 4: タイムライン日誌 (#view-timeline) -->
-    <section id="view-timeline" class="tab-view hidden space-y-4">
-      <!-- 同期＆アクションバー -->
-      <div class="flex items-center justify-between bg-white p-3 rounded-xl border shadow-sm">
-        <div class="flex items-center gap-2">
-          <button id="btn-sync-timeline" onclick="syncTimelineFromGas()" class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition shadow-sm active:scale-95">
-            <span id="sync-spinner" class="inline-block">🔄</span>
-            <span>クラウド同期</span>
-          </button>
-          <span id="timeline-sync-status" class="text-xs font-bold text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-200">
-            未同期
-          </span>
+    <!-- 農薬 -->
+    <section class="view" id="v-pest">
+      <h2>農薬をうすめる</h2>
+      <div class="card">
+        <label class="f">くすり<select id="pest-select" onchange="pcalc()"></select></label>
+        <div style="font-size:13px;color:var(--ink2);margin-top:12px">水の量</div>
+        <div class="litre" id="litre">
+          <button data-l="1" aria-pressed="false" onclick="pickL(1)">1 L</button><button data-l="2" aria-pressed="true" onclick="pickL(2)">2 L</button><button data-l="3" aria-pressed="false" onclick="pickL(3)">3 L</button><button data-l="5" aria-pressed="false" onclick="pickL(5)">5 L</button>
         </div>
-        <button onclick="openJournalEditor()" class="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm">
-          <span>✏️</span> 日誌を書く
-        </button>
-      </div>
-
-      <div class="bg-white p-3 rounded-xl border shadow-sm">
-        <div class="relative">
-          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">🔍</span>
-          <input type="text" id="timeline-search" oninput="filterTimeline()" placeholder="日誌をキーワード検索（例: ハダニ、ナス、収穫、サンヨール...）" class="w-full pl-9 pr-4 py-2 border rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
-        </div>
-      </div>
-
-      <div class="space-y-4" id="timeline-feed-container">
-        <article class="timeline-card bg-white p-5 rounded-2xl border shadow-sm space-y-3">
-          <div class="flex items-center justify-between border-b pb-2">
-            <div>
-              <h3 class="text-xl font-black text-gray-900">2026年9月27日</h3>
-              <span class="text-xs text-gray-500 font-semibold">日曜日</span>
-            </div>
-            <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
-              BatoBucket | EC: 2.0 | 水温: 23℃
-            </span>
-          </div>
-          <p class="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">ナスが山のように収穫できる時期になった。サンチュも小松菜もとてもたくさん取れる。</p>
-          <div class="flex gap-2 pt-1">
-            <img onclick="openLightbox(0)" src="https://images.unsplash.com/photo-1592417817098-8f3d6910985c?w=500&auto=format&fit=crop&q=80" alt="ナス写真" class="w-20 h-20 rounded-xl object-cover cursor-pointer hover:opacity-90 border">
-          </div>
-        </article>
-
-        <article class="timeline-card bg-white p-5 rounded-2xl border shadow-sm space-y-3">
-          <div class="flex items-center justify-between border-b pb-2">
-            <div>
-              <h3 class="text-xl font-black text-gray-900">2026年8月25日</h3>
-              <span class="text-xs text-gray-500 font-semibold">火曜日</span>
-            </div>
-            <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
-              BatoBucket | EC: 2.2 | 水温: 29℃
-            </span>
-          </div>
-          <p class="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">PC 筑陽は生育初期こそ勢いがなかったし、今もそんなに大きくはなっていないんだけれど、単為結果性のため、夏の間もちゃんとナスを収穫することができた。
-
-飛天長の方は、この夏まったく実をつけることはなく、株ばかりが大きくなり、もう2メーターを超えるような大きさまでなった。
-
-7月の初めぐらいまでは飛天長ばっかり食べていたから、PC筑陽を育てたのは正直失敗したなぁと思ったんだよね。だけど8月には結構取れたので、そう考えると飛天長とPC筑陽を1株ずつ育てたのは良かったのかもしれない。
-
-またハダニにやられている。暑すぎて園芸をやる気になれなかった。</p>
-          <div class="flex gap-2 pt-1">
-            <img onclick="openLightbox(2)" src="https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=500&auto=format&fit=crop&q=80" alt="ナス写真" class="w-20 h-20 rounded-xl object-cover cursor-pointer hover:opacity-90 border">
-          </div>
-        </article>
+        <label class="f">ほかの量（L）<input id="pest-water" inputmode="decimal" placeholder="例 1.5" oninput="pickL(null)"></label>
+        <div class="dose"><span>入れる量</span><b id="pest-dose">–</b><span id="pest-unit">mL</span><small id="pest-f"></small></div>
+        <div class="uses" id="pest-uses"></div>
+        <label class="f">どの系統にまく？<select id="pest-system" onchange="pcalc()"></select></label>
+        <label class="f">メモ<input id="pest-memo" placeholder="例 アオムシが出た"></label>
+        <button class="save" id="btn-pest-save" onclick="savePest()">散布したので記録する</button>
       </div>
     </section>
-
-    <!-- TAB 5: 農薬希釈電卓 (#view-pesticide) -->
-    <section id="view-pesticide" class="tab-view hidden space-y-4">
-      <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
-        <h2 class="text-lg font-bold flex items-center gap-2">
-          <span>🧪</span> 農薬希釈計算機
-        </h2>
-        <p class="text-xs text-slate-500">水耕現場での誤希釈防止用計算電卓。散布水量と倍率から正確な薬量を算出します。</p>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">散布水量 (mL)</label>
-          <input type="number" id="input-water-ml" data-testid="input-water-ml" placeholder="例: 3000 (3リットル)" value="3000"
-            class="w-full text-xl font-bold text-slate-800 bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none"
-            oninput="calculatePesticide()">
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">農薬プリセット（写真解析マスター）</label>
-          <select id="select-pesticide-preset" class="w-full text-sm font-semibold text-slate-700 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-200 focus:outline-none"
-            onchange="onPesticideSelect(this.value)">
-            <option value="nenchakukun">粘着くん液剤 (100倍 - アブラムシ・ハダニ・うどんこ病 [物理防除])</option>
-            <option value="sanyol">サンヨール DBEDC乳剤 (500倍 - うどんこ病・灰色かび・コナジラミ)</option>
-            <option value="wide_hitter">GFワイドヒッター 顆粒水和剤 (1000倍 - 殺菌: うどんこ・べと病・疫病 [g])</option>
-            <option value="zentari">STゼンターリ 顆粒水和剤 (1000倍 - BT殺虫: アオムシ・オオタバコガ [g])</option>
-            <option value="malathon">マラソン乳剤 (1000倍 - 殺虫: アブラムシ・ハダニ・スリップス)</option>
-            <option value="koromite">コロマイト乳剤 (1000倍 - 殺ダニ: ハダニ類・サビダニ)</option>
-            <option value="prevathon">プレバソンフロアブル5 (2000倍 - 殺虫: オオタバコガ・コナガ)</option>
-            <option value="dyne">展着剤 ダイン (5000倍 - 散布水1Lあたり0.2mL/数滴)</option>
-            <option value="custom">手動入力（自由指定）</option>
-          </select>
-        </div>
-        <div id="pesticide-details-badge" class="text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded-lg font-medium leading-relaxed">
-          対象: アブラムシ類、ハダニ類、コナジラミ類、うどんこ病 (デンプン系物理防除)
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">希釈倍率 (倍)</label>
-          <input type="number" id="input-dilution" data-testid="input-dilution" placeholder="例: 100" value="100"
-            class="w-full text-xl font-bold text-slate-800 bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none"
-            oninput="calculatePesticide()">
-        </div>
-
-        <!-- Calculated Pesticide Amount -->
-        <div class="mt-4 pt-4 border-t border-slate-100 bg-amber-50/60 rounded-xl p-4 text-center">
-          <span class="text-xs font-bold text-amber-800 uppercase tracking-wide">必要農薬量</span>
-          <div class="mt-1 flex items-baseline justify-center space-x-1">
-            <span id="display-pesticide-ml" data-testid="display-pesticide-ml" class="text-4xl font-black text-amber-700">30.0</span>
-            <span class="text-base font-bold text-amber-800">mL / g</span>
-          </div>
-          <p id="pesticide-formula-desc" class="text-[11px] text-slate-400 mt-1">3000 mL ÷ 100倍 = 30.0 mL</p>
-        </div>
-
-        <button onclick="copyToMemo()" class="w-full py-3 bg-gray-800 hover:bg-gray-900 text-white font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-sm">
-          <span>📝</span> この配合を本日の日誌メモに挿入
-        </button>
-      </div>
-    </section>
-
   </main>
+</div>
 
-  <!-- プラン編集・追加モーダル (#plan-editor-modal) -->
-  <div id="plan-editor-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white rounded-3xl p-5 space-y-4 max-w-md w-full shadow-2xl">
-      <div class="flex justify-between items-center border-b pb-3">
-        <div>
-          <h3 class="font-black text-lg text-gray-900" id="plan-modal-title">2027年 10月の計画</h3>
-          <p class="text-xs text-gray-500">時期と作業内容を登録</p>
-        </div>
-        <button onclick="closePlanEditor()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">✕</button>
-      </div>
+<nav class="tabs" aria-label="画面の切りかえ">
+  <button aria-current="page" data-v="v-record" onclick="go('v-record')"><span class="ic">💧</span>記録<span class="badge" id="badge" hidden></span></button>
+  <button data-v="v-history" onclick="go('v-history')"><span class="ic">📖</span>見返し</button>
+  <button data-v="v-plan" onclick="go('v-plan')"><span class="ic">📅</span>予定</button>
+  <button data-v="v-pest" onclick="go('v-pest')"><span class="ic">🧴</span>農薬</button>
+</nav>
 
-      <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
-        <div class="font-bold flex items-center gap-1 mb-1">
-          <span>💡</span> 前年（2026年10月）の記録参照:
-        </div>
-        <p class="text-gray-700 leading-snug">「中旬 スナックエンドウ種まき。インゲンは11月に撤収予定。」</p>
-      </div>
+<div class="sheet-bg" id="bg" onclick="closeSheets()"></div>
 
-      <div class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">時期</label>
-          <select id="plan-timing" class="w-full p-2.5 border rounded-xl bg-gray-50 text-sm font-bold">
-            <option>上旬</option>
-            <option selected>中旬</option>
-            <option>下旬</option>
-            <option>日付指定</option>
-            <option>条件トリガー（気温30℃超など）</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">作業内容・メモ</label>
-          <textarea id="plan-details" rows="3" class="w-full p-2.5 border rounded-xl bg-gray-50 text-sm focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="例: スナックエンドウの種まき"></textarea>
-        </div>
-      </div>
-
-      <button onclick="savePlanEntry()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition">
-        計画をスプレッドシートに保存
-      </button>
-    </div>
+<div class="sheet" id="sheet-plan" role="dialog" aria-label="予定">
+  <h3 id="plan-title">予定を足す</h3>
+  <div class="grid2">
+    <label class="f">月<select id="plan-month"></select></label>
+    <label class="f">いつ<select id="plan-timing" onchange="document.getElementById('plan-date-box').hidden=this.value!=='date'"><option>上旬</option><option>中旬</option><option>下旬</option><option value="date">日付で決める</option></select></label>
   </div>
-
-  <!-- フルスクリーン記事作成モーダル (#journal-editor-modal) -->
-  <div id="journal-editor-modal" class="fixed inset-0 bg-white z-50 hidden flex flex-col">
-    <div class="px-4 py-3 border-b flex items-center justify-between bg-white sticky top-0">
-      <button onclick="closeJournalEditor()" class="text-gray-600 hover:text-gray-900 text-lg p-1 font-bold">✕</button>
-      <div class="text-sm font-bold text-gray-800 flex items-center gap-1">
-        <span>📅</span> 本日の栽培日誌
-      </div>
-      <div class="flex items-center gap-2">
-        <button id="btn-delete-from-editor" onclick="deleteFromEditorModal()" class="hidden px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-full transition flex items-center gap-1 border border-rose-200">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          <span>削除</span>
-        </button>
-        <button id="btn-save-journal" onclick="saveJournalEntry()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black rounded-full shadow-sm transition">保存</button>
-      </div>
-    </div>
-    <div class="flex-1 p-4 overflow-y-auto">
-      <textarea id="editor-textarea" rows="10" placeholder="本日の水耕の状況、気づき、収穫、追肥の様子を入力してください..." class="w-full h-full text-base leading-relaxed text-gray-800 outline-none resize-none bg-transparent placeholder-gray-400"></textarea>
-    </div>
-    <div id="editor-photo-tray" class="px-4 py-3 border-t bg-gray-50/70">
-      <p class="text-[11px] font-bold text-gray-400 mb-1.5">添付写真（＋ボタンでギャラリーからポチポチ追加 / ✕で削除）:</p>
-      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar" id="editor-thumbnails"></div>
-    </div>
-    <div class="px-4 py-2.5 border-t bg-white flex items-center justify-between text-gray-500">
-      <div class="flex items-center space-x-4 text-xl">
-        <button onclick="triggerGalleryPick()" title="アルバムから写真を追加" class="hover:text-emerald-600 text-lg" id="btn-editor-gallery">🖼️</button>
-        <button onclick="triggerCameraCapture()" title="カメラで今すぐ撮影" class="hover:text-emerald-600 text-lg" id="btn-editor-camera">📸</button>
-        <button onclick="insertTag('#収穫')" title="タグ追加" class="text-sm font-bold bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded text-gray-700">#収穫</button>
-        <button onclick="insertTag('#追肥')" title="タグ追加" class="text-sm font-bold bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded text-gray-700">#追肥</button>
-      </div>
-      <span class="text-xs text-gray-400" id="editor-char-count">0文字</span>
-    </div>
+  <label class="f" id="plan-date-box" hidden>日付<input type="date" id="plan-date"></label>
+  <div class="grid2">
+    <label class="f">系統<select id="plan-system"><option value="">全体</option><option value="bato">BatoBucket</option><option value="dwc">DWC</option><option value="tower">タワー</option></select></label>
+    <label class="f">作業<select id="plan-work"><option>追肥</option><option>水替え</option><option>農薬</option><option>種まき</option><option>植え付け</option><option>収穫</option><option>片付け</option><option>見直し</option><option>その他</option></select></label>
   </div>
+  <label class="f">内容<input id="plan-details" placeholder="例 ルッコラ"></label>
+  <div class="row"><button class="btn-del" id="btn-plan-delete" onclick="deletePlan()">消す</button><button class="btn-sub" onclick="closeSheets()">やめる</button><button class="btn-main" id="btn-plan-save" onclick="savePlan()">保存する</button></div>
+</div>
 
-  <!-- 写真選択ボトムシートモーダル (#photo-picker-sheet) -->
-  <div id="photo-picker-sheet" class="fixed inset-0 z-50 hidden">
-    <!-- 背景暗幕 (タップで閉じる) -->
-    <div onclick="closePhotoPickerSheet()" class="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"></div>
-    
-    <!-- シート本体 (下部からスライドアップ) -->
-    <div class="absolute bottom-0 inset-x-0 bg-white rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 max-w-md mx-auto z-10 transition-transform">
-      <div class="w-12 h-1 bg-slate-300 rounded-full mx-auto mb-4"></div>
-      
-      <div class="text-center mb-4">
-        <h3 class="text-base font-black text-slate-800">現場写真の追加</h3>
-        <p class="text-xs text-slate-500 mt-0.5">追加方法を選択してください（長辺1000pxに自動最適化）</p>
-      </div>
-
-      <div class="space-y-2.5">
-        <!-- カメラ起動ボタン -->
-        <button type="button" id="btn-sheet-camera" onclick="triggerSheetCamera()"
-          class="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-2xl font-black text-sm flex items-center justify-center space-x-2.5 shadow-sm transition active:scale-98 cursor-pointer">
-          <span class="text-xl">📸</span>
-          <span>カメラで今すぐ撮影（現場用）</span>
-        </button>
-
-        <!-- ギャラリー選択ボタン -->
-        <button type="button" id="btn-sheet-gallery" onclick="triggerSheetGallery()"
-          class="w-full py-3.5 px-4 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 rounded-2xl font-black text-sm flex items-center justify-center space-x-2.5 transition active:scale-98 cursor-pointer border border-slate-200">
-          <span class="text-xl">🖼️</span>
-          <span>アルバム / ギャラリーから選択</span>
-        </button>
-
-        <!-- キャンセルボタン -->
-        <button type="button" id="btn-sheet-cancel" onclick="closePhotoPickerSheet()"
-          class="w-full py-3 text-slate-400 hover:text-slate-600 font-bold text-xs mt-2 transition">
-          キャンセル
-        </button>
-      </div>
-    </div>
+<div class="sheet" id="sheet-edit" role="dialog" aria-label="記録を直す">
+  <h3>記録を直す</h3>
+  <p class="chartnote" id="edit-sub" style="margin:0"></p>
+  <div class="grid2" id="edit-nums">
+    <label class="f">EC<input id="edit-ec" inputmode="decimal"></label>
+    <label class="f">追肥 mL<input id="edit-added" inputmode="decimal"></label>
+    <label class="f">pH<input id="edit-ph" inputmode="decimal"></label>
+    <label class="f">水温 ℃<input id="edit-temp" inputmode="decimal"></label>
   </div>
+  <label class="f" id="edit-dose-box">薬量<input id="edit-dose" inputmode="decimal"></label>
+  <label class="f">メモ<textarea id="edit-memo"></textarea></label>
+  <div class="row"><button class="btn-del" id="btn-edit-delete" onclick="deleteRecord()">消す</button><button class="btn-sub" onclick="closeSheets()">やめる</button><button class="btn-main" id="btn-edit-save" onclick="saveEdit()">保存する</button></div>
+</div>
 
-  <!-- 写真ライトボックスモーダル (#photo-modal) -->
-  <div id="photo-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col justify-between p-4 backdrop-blur-sm">
-    <div class="flex justify-between items-center text-white">
-      <span id="modal-counter" class="text-sm font-semibold">1 / 4</span>
-      <button onclick="closeLightbox()" class="p-2 text-2xl hover:text-gray-300">✕</button>
-    </div>
-    <div class="flex-1 flex items-center justify-center relative select-none">
-      <button onclick="prevPhoto()" class="absolute left-2 text-white/80 hover:text-white bg-black/40 hover:bg-black/70 p-3 rounded-full text-xl z-10">◀</button>
-      <img id="modal-img" src="" alt="拡大写真" class="max-h-[75vh] max-w-full object-contain rounded-lg shadow-2xl transition duration-200">
-      <button onclick="nextPhoto()" class="absolute right-2 text-white/80 hover:text-white bg-black/40 hover:bg-black/70 p-3 rounded-full text-xl z-10">▶</button>
-    </div>
-    <div class="text-white text-center pb-2">
-      <p id="modal-caption" class="text-sm font-bold"></p>
-      <p class="text-xs text-gray-400 mt-0.5">左右キー (← →) またはスワイプで連続閲覧できます</p>
-    </div>
-  </div>
+<div class="sheet" id="sheet-settings" role="dialog" aria-label="設定">
+  <h3>設定</h3>
+  <label class="f">送り先（GAS の URL）<input id="set-url" placeholder="空なら決まりの送り先"></label>
+  <label class="f">合言葉（シートの持ち主が決めたもの。なければ空）<input id="set-token" autocomplete="off"></label>
+  <p class="chartnote">目標EC・作物・知らせの間隔は、スプレッドシート「HydroDaily_栽培ログ」の「設定」タブで直します。農薬の上限回数は「農薬一覧」タブです。</p>
+  <div class="row"><button class="btn-main" id="btn-set-save" onclick="saveSettings()">保存する</button></div>
+  <div class="row"><button class="btn-sub" onclick="flush(true);pullAll(true)">いま同期する</button><button class="btn-sub" id="btn-export" onclick="exportLocal()">端末の記録を書き出す</button></div>
+  <div class="row"><a class="btn-sub" href="dashboard.html">PCの10年日記を開く</a><button class="btn-sub" onclick="closeSheets()">閉じる</button></div>
+</div>
 
-  <!-- Toast Notification -->
-  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg pointer-events-none z-50 hidden">
-    メッセージ
-  </div>
+<div class="toast" id="toast" role="status" hidden></div>
 
-  <!-- Settings Modal -->
-  <div id="modal-settings" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b pb-2">
-        <h3 class="text-sm font-bold text-slate-800 flex items-center space-x-1.5">
-          <span>⚙️</span>
-          <span>Google連携設定</span>
-        </h3>
-        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
-      </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-600 mb-1">Google Apps Script Web App URL</label>
-        <input type="url" id="input-gas-url" placeholder="https://script.google.com/macros/s/.../exec"
-          class="w-full text-xs text-slate-800 bg-slate-50 border rounded-xl p-2.5 focus:border-emerald-500 focus:outline-none">
-        <p class="text-[10px] text-slate-400 mt-1">※スプレッドシート連携用GASのデプロイURLを貼り付けてください。</p>
-      </div>
-      <div class="flex space-x-2 pt-2">
-        <button onclick="closeSettingsModal()" class="flex-1 py-2.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200">キャンセル</button>
-        <button onclick="saveGasSettings()" class="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700">設定を保存</button>
-      </div>
-    </div>
-  </div>
+<script>
+'use strict';
+const VERSION = '2.0.0';
+const DEFAULT_GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzHnbRYd8D5auR8GmDNNQAR9PiCKyxhVpFelbXPW4bJl9A6MmnasbcEPNCMqE_XgT_c/exec';
+const SYS = {
+  bato: { name: 'BatoBucket', short: 'BatoBucket', tank: 94, target: 2.0, crops: 'スティックセニョール', color: '#4E7D3A' },
+  dwc: { name: 'DWC / NFT', short: 'DWC', tank: 140, target: 1.6, crops: 'サンチュ・小松菜・ルッコラ', color: '#7FA233' },
+  tower: { name: 'タワー型', short: 'タワー', tank: 19, target: 2.0, crops: 'スティックセニョール', color: '#47668F' }
+};
+const DEFAULT_PESTS = [
+  { id: 'nenchakukun', name: '粘着くん液剤', dilution: 100, unit: 'mL' },
+  { id: 'sanyol', name: 'サンヨール', dilution: 500, unit: 'mL' },
+  { id: 'wide_hitter', name: 'GFワイドヒッター顆粒水和剤', dilution: 1000, unit: 'g' },
+  { id: 'zentari', name: 'ゼンターリ顆粒水和剤', dilution: 1000, unit: 'g' },
+  { id: 'malathon', name: 'マラソン乳剤', dilution: 1000, unit: 'mL' },
+  { id: 'koromite', name: 'コロマイト乳剤', dilution: 1000, unit: 'mL' },
+  { id: 'prevathon', name: 'プレバソンフロアブル5', dilution: 2000, unit: 'mL' },
+  { id: 'dyne', name: 'ダイン（展着剤）', dilution: 5000, unit: 'mL' }
+];
+const K = { records: 'hydro_v2_records', queue: 'hydro_v2_queue', plans: 'hydro_v2_plans', cache: 'hydro_v2_cache', lastSent: 'hydro_v2_last_sent', migrated: 'hydro_v2_migrated', ui: 'hydro_v2_ui', url: 'hydro_gas_endpoint', token: 'hydro_write_token' };
 
-  <!-- Client Logic -->
-  <script>
-    const DEFAULT_GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzHnbRYd8D5auR8GmDNNQAR9PiCKyxhVpFelbXPW4bJl9A6MmnasbcEPNCMqE_XgT_c/exec';
+/* ---------- 端末の保存（失敗しても止まらない） ---------- */
+function load(key, def) { try { const v = localStorage.getItem(key); return v === null ? def : JSON.parse(v); } catch (e) { return def; } }
+function store(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (e) { return false; } }
+function raw(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 
-    function getGasEndpoint() {
-      let saved = localStorage.getItem('hydro_gas_endpoint');
-      if (saved && saved.includes('AKfycbwuuQOjC')) {
-        localStorage.removeItem('hydro_gas_endpoint');
-        saved = null;
-      }
-      if (saved) return saved;
-      if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
-        return '/dummy-gas-endpoint';
-      }
-      return DEFAULT_GAS_ENDPOINT;
-    }
+let records = load(K.records, {});
+let queue = load(K.queue, []);
+let plans = load(K.plans, {});
+let cache = load(K.cache, { settings: {}, pesticides: [], sprayCounts: {}, today: [] });
+let ui = load(K.ui, { sys: 'bato' });
+let kind = '液肥', litre = 2, photos = [], editId = null, planEditId = null, historyLimit = 50, monthOpen = null;
+let fSys = 'all', fKind = 'all', sending = false, lastError = '';
 
-    function openSettingsModal() {
-      document.getElementById('input-gas-url').value = localStorage.getItem('hydro_gas_endpoint') || '';
-      document.getElementById('modal-settings').classList.remove('hidden');
-    }
+/* ---------- 日付（端末の日付） ---------- */
+const pad = n => ('0' + n).slice(-2);
+function today(off = 0) { const d = new Date(Date.now() + off * 86400000); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function nowTime() { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+// 更新日時は同じ端末の中では必ず前より新しくする（続けて直しても「同じ時刻」にならない）
+let lastTs = 0;
+function nowIso() { let t = Date.now(); if (t <= lastTs) t = lastTs + 1; lastTs = t; return new Date(t).toISOString(); }
+function toDateStr(v) {
+  if (!v) return '';
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/); if (m) return m[1] + '-' + pad(m[2]) + '-' + pad(m[3]);
+  m = s.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日/); if (m) return m[1] + '-' + pad(m[2]) + '-' + pad(m[3]);
+  const d = new Date(s); if (!isNaN(d)) return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  return '';
+}
+function jpDate(s) { const p = s.split('-'); if (p.length !== 3) return s; const d = new Date(+p[0], +p[1] - 1, +p[2]); return (+p[1]) + '月' + (+p[2]) + '日（' + '日月火水木金土'[d.getDay()] + '）'; }
+function md(s) { const p = s.split('-'); return (+p[1]) + '/' + (+p[2]); }
+function num(v) { if (v === null || v === undefined) return ''; const s = String(v).trim(); if (s === '') return ''; const n = Number(s); return isNaN(n) ? '' : n; }
+function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function keyOf(v) { const s = String(v || ''); if (SYS[s]) return s; if (/bato/i.test(s)) return 'bato'; if (/dwc|nft/i.test(s)) return 'dwc'; if (/タワー|tower/i.test(s)) return 'tower'; return ''; }
+function newId(p) { return p + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
 
-    function closeSettingsModal() {
-      document.getElementById('modal-settings').classList.add('hidden');
-    }
+/* ---------- 系統の設定（シートの「設定」タブが正） ---------- */
+function sysCfg(k) {
+  const s = cache.settings || {};
+  const base = SYS[k];
+  const t = num(s['目標EC_' + k]);
+  return Object.assign({}, base, { target: t === '' ? base.target : t, crops: s['作物_' + k] || base.crops });
+}
+function pests() { return (cache.pesticides && cache.pesticides.length) ? cache.pesticides : DEFAULT_PESTS; }
 
-    function saveGasSettings() {
-      const url = document.getElementById('input-gas-url').value.trim();
-      localStorage.setItem('hydro_gas_endpoint', url);
-      closeSettingsModal();
-      showToast('✅ Google連携URLを保存しました！');
-    }
+/* ---------- 画面の切りかえ ---------- */
+function go(v) {
+  document.querySelectorAll('nav.tabs button').forEach(b => b.dataset.v === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
+  document.querySelectorAll('section.view').forEach(s => s.classList.toggle('on', s.id === v));
+  if (v === 'v-history') renderHistory();
+  if (v === 'v-plan') renderPlans();
+  if (v === 'v-pest') pcalc();
+  window.scrollTo(0, 0);
+}
+function toast(m, ms) { const t = document.getElementById('toast'); t.textContent = m; t.hidden = false; clearTimeout(window._tt); window._tt = setTimeout(() => { t.hidden = true; }, ms || 3000); }
 
-    // Configuration
-    const SYSTEM_CONFIG = {
-      bato: { name: 'BatoBucket', tank: 94, targetEc: 2.2, crops: 'スティックセニョール・秋ナス' },
-      dwc: { name: 'DWC / NFT', tank: 140, targetEc: 1.4, crops: 'サンチュ・青ネギ・小松菜' },
-      tower: { name: 'タワー型', tank: 19, targetEc: 1.8, crops: 'スティックセニョール' }
-    };
+/* ---------- 記録タブ ---------- */
+function renderSystems() {
+  document.getElementById('systems').innerHTML = Object.keys(SYS).map(k => {
+    const c = sysCfg(k);
+    return `<button class="sysbtn" style="--c:${c.color}" data-sys="${k}" aria-pressed="${ui.sys === k}" onclick="pickSys('${k}')"><b>${esc(c.short)}</b><span>${esc(c.crops)}</span></button>`;
+  }).join('');
+}
+function pickSys(k) { ui.sys = k; store(K.ui, ui); renderSystems(); calc(); label(); }
+function pickKind(k) {
+  kind = k;
+  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.kind === k));
+  document.getElementById('ec-card').hidden = k === '日誌';
+  document.getElementById('more').hidden = k === '日誌';
+  document.getElementById('dose-box').hidden = k !== '液肥';
+  calc(); label();
+}
+function label() { document.getElementById('btn-save').textContent = sysCfg(ui.sys).short + ' の' + (kind === '日誌' ? '日誌' : kind) + 'を記録する'; }
+function stepEc(d) { const i = document.getElementById('ec-input'); const v = Math.max(0, Math.round(((parseFloat(i.value) || sysCfg(ui.sys).target) + d) * 10) / 10); i.value = v.toFixed(1); calc(); }
+function doseFor(k, ec) { const c = sysCfg(k); if (ec === '' || ec >= c.target) return 0; return Math.round(c.tank * (c.target - ec) * 4.0 * 10) / 10; }
+function calc() {
+  const c = sysCfg(ui.sys);
+  const v = num(document.getElementById('ec-input').value);
+  const ok = v !== '';
+  document.getElementById('ec-now').textContent = ok ? v.toFixed(1) : '–';
+  document.getElementById('ec-target').textContent = c.target.toFixed(1);
+  document.getElementById('fill').style.width = (ok ? Math.min(v, 4) / 4 * 100 : 0) + '%';
+  document.getElementById('tmark').style.left = (c.target / 4 * 100) + '%';
+  const lock = kind !== '日誌' && ok && v >= 3.5;
+  document.getElementById('warn').hidden = !lock;
+  document.getElementById('btn-save').disabled = lock;
+  const d = ok ? Math.max(0, c.target - v) : 0;
+  document.getElementById('dose').textContent = !ok ? '–' : (v >= c.target ? '0（追肥不要）' : doseFor(ui.sys, v).toFixed(1));
+  document.getElementById('dose-f').textContent = '満水 ' + c.tank + 'L × 差 ' + d.toFixed(1) + ' × 4.0（自動給水なので常に満水）';
+}
+function addPhotos(input) {
+  const files = Array.from(input.files || []);
+  input.value = '';
+  files.forEach(f => compress(f).then(d => { photos.push(d); renderTray(); }).catch(() => toast('写真を読み込めませんでした')));
+}
+function compress(file) {
+  return new Promise((ok, ng) => {
+    const r = new FileReader();
+    r.onerror = ng;
+    r.onload = () => { const img = new Image(); img.onerror = ng; img.onload = () => {
+      const s = Math.min(1, 1200 / Math.max(img.width, img.height)); const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      ok(cv.toDataURL('image/jpeg', 0.8)); }; img.src = r.result; };
+    r.readAsDataURL(file);
+  });
+}
+function renderTray() {
+  const tray = document.getElementById('photo-tray');
+  tray.querySelectorAll('.thumb').forEach(t => t.remove());
+  photos.forEach((p, i) => { const d = document.createElement('div'); d.className = 'thumb'; d.innerHTML = `<img src="${p}" alt="写真${i + 1}"><button aria-label="写真をはずす" onclick="photos.splice(${i},1);renderTray()"><span>✕</span></button>`; tray.prepend(d); });
+}
+// 二度押しよけ（ボタンごとに 1.5 秒。濡れた手の二度押しで記録が2件にならない。辛口審査 C4）
+const guards = {};
+function guard(btnId) {
+  const now = Date.now();
+  if (guards[btnId] && now - guards[btnId] < 1500) return false;
+  guards[btnId] = now;
+  const b = document.getElementById(btnId);
+  if (b) { b.disabled = true; setTimeout(() => { b.disabled = false; calc(); pcalc(); }, 1500); }
+  return true;
+}
+const SAVE_FAIL = '端末に保存できませんでした（保存場所がいっぱいです）。入力はそのままです。設定の「端末の記録を書き出す」で控えを取ってください';
+function saveRecord() {
+  const k = ui.sys, c = sysCfg(k);
+  const ec = kind === '日誌' ? '' : num(document.getElementById('ec-input').value);
+  if (kind !== '日誌' && ec !== '' && ec >= 3.5) return;
+  const memo = document.getElementById('input-memo').value.trim();
+  if (kind === '日誌' && !memo && !photos.length) { toast('メモか写真を入れてください'); return; }
+  if (kind === '液肥' && ec === '') { toast('今のECを入れてください'); return; }
+  if (!guard('btn-save')) return;
+  const rec = {
+    id: newId('rec'), date: today(), time: nowTime(), systemKey: k, system: c.name, kind,
+    ec, ph: kind === '日誌' ? '' : num(document.getElementById('input-ph').value), temp: kind === '日誌' ? '' : num(document.getElementById('input-temp').value),
+    targetEc: kind === '液肥' ? c.target : '', addedMl: kind === '液肥' ? doseFor(k, ec) : '',
+    pestName: '', dilution: '', waterL: '', dose: '', unit: '', memo, photos: photos.slice(), updatedAt: nowIso(), deleted: false
+  };
+  if (!putRecord(rec)) { toast(SAVE_FAIL, 8000); return; }
+  ['ec-input', 'input-ph', 'input-temp', 'input-memo'].forEach(id => { document.getElementById(id).value = ''; });
+  photos = []; renderTray(); calc();
+  cache.today = (cache.today || []).filter(t => !(t.system === k && (t.type === rec.kind)));
+  store(K.cache, cache); renderToday();
+  flush(true);
+}
 
-    let currentSystem = 'bato';
-    let attachedPhotos = [];
+/* ---------- 送る（未送信の列） ----------
+ * 記録は「先に未送信の列に入れる → 入れられたら端末の記録にも入れる」の順。
+ * 列に入れられなかったら保存しなかったことにして、入力を消さずに知らせる（辛口審査 C1）。
+ * 端末の記録（records）には写真の中身（dataURL）を持たない。中身は列にだけあり、送れたら URL に置きかわる。
+ */
+function slim(r) { const o = Object.assign({}, r); delete o.deleted; return o; }
+function noData(r) { return Object.assign({}, r, { photos: (r.photos || []).filter(p => !/^data:/.test(p)) }); }
+function enqueue(op) {
+  let q = queue.slice();
+  if (op.action === 'upsert') q = q.filter(x => !(x.action === 'upsert' && x.record.id === op.record.id));
+  if (op.action === 'delete') q = q.filter(x => !(x.action === 'upsert' && x.record.id === op.id));
+  if (op.action === 'save_plan') q = q.filter(x => !(x.action === 'save_plan' && x.plan.id === op.plan.id));
+  if (op.action === 'delete_plan') q = q.filter(x => !(x.action === 'save_plan' && x.plan.id === op.id));
+  q.push(op);
+  if (!store(K.queue, q)) return false;
+  queue = q;
+  renderSync();
+  return true;
+}
+function putRecord(rec) {
+  if (!enqueue({ action: 'upsert', record: slim(rec) })) return false;
+  records[rec.id] = noData(rec);
+  store(K.records, records);
+  return true;
+}
+function pendingIds() {
+  const s = new Set();
+  queue.forEach(q => s.add(q.record ? q.record.id : (q.plan ? q.plan.id : q.id)));
+  legacyOps().forEach(o => s.add(o.record ? o.record.id : o.id));
+  return s;
+}
+function pendingRecord(id) { const q = queue.find(x => x.action === 'upsert' && x.record.id === id); return q ? q.record : null; }
+function rawStr(key) { const v = raw(key); if (!v) return ''; try { const j = JSON.parse(v); return typeof j === 'string' ? j : ''; } catch (e) { return v; } }
+function endpoint() { const saved = rawStr(K.url); if (saved && saved.indexOf('AKfycbwuuQOjC') < 0) return saved; if (/^(127\.0\.0\.1|localhost)$/.test(location.hostname)) return '/dummy-gas-endpoint'; return DEFAULT_GAS_ENDPOINT; }
+function token() { return rawStr(K.token); }
+// 返事が来ないときは時間切れにする（電波が弱くても「送っています…」で固まらない。辛口審査 W2）
+function fetchT(url, opts) {
+  const ms = parseInt(raw('hydro_v2_timeout_ms'), 10) || 25000;
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), ms);
+  return fetch(url, Object.assign({}, opts || {}, { signal: ac.signal })).finally(() => clearTimeout(timer));
+}
+function queueCount() { return queue.length + legacyOps().length; }
 
-    // Daily Status Management
-    function getTodayKey() {
-      const now = new Date();
-      return `hydro_status_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    }
-
-    function updateDailyStatusBadges() {
-      const todayKey = getTodayKey();
-      const status = JSON.parse(localStorage.getItem(todayKey) || '{}');
-      const todayDateStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
-      const stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
-      const deletedIds = new Set(JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]'));
-      const validEntries = stored.filter(e => e && e.id && !deletedIds.has(e.id));
-      
-      ['bato', 'dwc', 'tower'].forEach(sys => {
-        const sysName = SYSTEM_CONFIG && SYSTEM_CONFIG[sys] ? SYSTEM_CONFIG[sys].name : '';
-        const hasTodayTimeline = validEntries.some(e => {
-          const isDateMatch = (e.date === todayDateStr) || (e.timestamp && new Date(e.timestamp).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) === todayDateStr);
-          const isSysMatch = (e.system === sysName) || (e.systemKey === sys);
-          return isDateMatch && isSysMatch;
-        });
-        const isRecorded = status[sys] || hasTodayTimeline;
-
-        const badge = document.getElementById(`tab-${sys}-status`);
-        if (badge) {
-          if (isRecorded) {
-            badge.textContent = '✅ 本日記録済';
-            badge.className = 'mt-1 bg-white/20 text-white text-[10px] px-1.5 py-0.2 rounded-full';
-          } else {
-            badge.textContent = '⏳ 未記録';
-            badge.className = 'mt-1 bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full';
-          }
-        }
+async function flush(userAsked) {
+  if (sending) return;
+  if (!queueCount()) { renderSync(); return; }
+  sending = true; renderSync();
+  let failed = false, staleN = 0, goneN = 0;
+  try {
+    while (queueCount()) {
+      // 新しい記録を先に送る（古い記録が受け取ってもらえなくても、新しい記録は止めない。再審査 W-a）
+      const ops = queue.concat(legacyOps()).slice(0, 10);
+      const body = { action: 'batch', ops: ops.map(o => { const c = Object.assign({}, o); delete c._legacy; delete c._key; return c; }) };
+      const tk = token(); if (tk) body.token = tk;
+      const res = await fetchT(endpoint(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!data || data.status !== 'success') { lastError = (data && data.message) || '送り先から返事がありません'; failed = true; break; }
+      const done = new Set();
+      (data.results || []).forEach((r, i) => {
+        const op = ops[i];
+        if (!op || !r || r.result === 'error') return;
+        done.add(op);
+        if (op._legacy) legacyAck(op._key);
+        if (r.result === 'stale') staleN++;
+        if (r.result === 'deleted' && (op.action === 'upsert' || op.action === 'save_plan')) goneN++;
+        if (op.action === 'upsert' && Array.isArray(r.photos) && records[op.record.id]) records[op.record.id].photos = r.photos;
       });
+      if (!done.size) { lastError = '送った記録を受け取ってもらえませんでした'; failed = true; break; }
+      queue = queue.filter(q => !done.has(q));
+      store(K.queue, queue); store(K.records, records);
+      store(K.lastSent, nowIso());
+      lastError = '';
     }
+  } catch (e) { failed = true; lastError = ''; }
+  sending = false;
+  finishLegacy();
+  renderSync();
+  if (userAsked) {
+    if (failed) toast(lastError ? '送れませんでした：' + lastError : '送れませんでした。電波が戻ったら自動で送ります');
+    else if (staleN) toast('シートの方が新しい内容だったので、そちらに合わせました（別の端末で直したものです）', 6000);
+    else if (goneN) toast('ほかで消された記録だったので、保存しませんでした', 6000);
+    else toast('シートに保存しました');
+  }
+  if (staleN || goneN) pullAll(false);
+  if (document.getElementById('v-history').classList.contains('on')) renderHistory();
+  if (document.getElementById('v-plan').classList.contains('on')) renderPlans();
+}
+function renderSync() {
+  const bar = document.getElementById('sync-bar'), t = document.getElementById('sync-text'), b = document.getElementById('btn-send-now'), badge = document.getElementById('badge');
+  const n = queueCount();
+  bar.classList.remove('wait', 'err');
+  if (sending) { t.textContent = '送っています…（' + n + '件）'; b.hidden = true; }
+  else if (n) { bar.classList.add(lastError ? 'err' : 'wait'); t.textContent = '未送信 ' + n + '件' + (lastError ? '（' + lastError + '）' : '（電波が戻ったら自動で送ります）'); b.hidden = false; }
+  else { const ls = load(K.lastSent, ''); const d = ls ? new Date(ls) : null; t.textContent = 'すべて送信済み' + (d ? '（最後に送れた時刻 ' + (toDateStr(ls) === today() ? '' : md(toDateStr(ls)) + ' ') + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '）' : ''); b.hidden = true; }
+  badge.hidden = !n; badge.textContent = n;
+}
+window.addEventListener('online', () => flush(false));
 
-    // Initialize UI
-    document.addEventListener('DOMContentLoaded', () => {
-      updateDailyStatusBadges();
-      const now = new Date();
-      const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
-      const dateStr = now.toLocaleDateString('ja-JP', options);
-      if (document.getElementById('today-date-display')) {
-        document.getElementById('today-date-display').textContent = dateStr;
-      }
-
-      // Restore system & drafts
-      const savedSys = localStorage.getItem('hydro_selected_system') || 'bato';
-      selectSystem(savedSys);
-      loadDraft();
-      calculatePesticide();
-      renderSavedTimelineEntries();
-      // サイレントにクラウド同期を実行
-      syncTimelineFromGas(true);
-
-      // Register Service Worker for PWA
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Reg Failed:', err));
-      }
+/* ---------- 受け取る ---------- */
+async function getJson(action, extra) {
+  const u = endpoint(); const sep = u.includes('?') ? '&' : '?';
+  const res = await fetchT(u + sep + 'action=' + action + (extra || ''));
+  const d = await res.json();
+  if (!d || d.status !== 'success') throw new Error((d && d.message) || action);
+  return d;
+}
+async function pullAll(userAsked) {
+  const pend = pendingIds();
+  let ok = true;
+  try {
+    const d = await getJson('get_records', '&include_deleted=1');
+    (d.records || []).forEach(r => {
+      if (!r || !r.id || pend.has(r.id)) return;
+      const cur = records[r.id];
+      if (cur && cur.deleted) return;
+      if (r.deleted) { records[r.id] = Object.assign({}, cur || r, { deleted: true }); return; }
+      if (!cur || (r.updatedAt || '') >= (cur.updatedAt || '')) records[r.id] = noData(Object.assign({}, r, { deleted: false }));
     });
-
-    // Switch Tabs
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.tab-btn').forEach(el => {
-        el.classList.remove('border-emerald-600', 'text-emerald-600', 'font-bold');
-        el.classList.add('border-transparent', 'text-gray-600', 'font-semibold');
-      });
-
-      const targetView = document.getElementById('view-' + tabId);
-      if (targetView) targetView.classList.remove('hidden');
-      const activeBtn = document.getElementById('tab-btn-' + tabId);
-      if (activeBtn) {
-        activeBtn.classList.remove('border-transparent', 'text-gray-600', 'font-semibold');
-        activeBtn.classList.add('border-emerald-600', 'text-emerald-600', 'font-bold');
-      }
-    }
-
-    // Select System Tab
-    function selectSystem(sysKey) {
-      currentSystem = sysKey;
-      localStorage.setItem('hydro_selected_system', sysKey);
-
-      const cfg = SYSTEM_CONFIG[sysKey];
-      document.getElementById('current-system-name').textContent = cfg.name;
-      document.getElementById('current-crop-name').textContent = cfg.crops;
-      document.getElementById('target-ec-display').innerHTML = `${cfg.targetEc.toFixed(1)} <span class="text-xs font-normal text-slate-500">mS/cm</span>`;
-      document.getElementById('calc-formula-desc').textContent = `水道満水(${cfg.tank}L) ✕ 差分EC ✕ 4.0`;
-
-      // Update system buttons
-      ['bato', 'dwc', 'tower'].forEach(k => {
-        const btn = document.getElementById('tab-' + k);
-        if (btn) {
-          if (k === sysKey) {
-            btn.className = 'py-2.5 px-2 rounded-lg text-center font-bold text-xs sm:text-sm bg-emerald-600 text-white shadow-sm flex flex-col items-center justify-center transition';
-          } else {
-            btn.className = 'py-2.5 px-2 rounded-lg text-center font-bold text-xs sm:text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 flex flex-col items-center justify-center transition';
-          }
-        }
-      });
-
-      // Load draft for this system
-      loadDraft();
-    }
-
-    // EC Input & Calculation
-    function handleEcInput(val) {
-      saveDraft();
-      recalcFertilizer();
-    }
-
-    function recalcFertilizer() {
-      const ecInput = document.getElementById('input-current-ec');
-      const val = ecInput.value;
-      const currentEc = parseFloat(val);
-      const targetEc = SYSTEM_CONFIG[currentSystem].targetEc;
-      const tankSize = SYSTEM_CONFIG[currentSystem].tank;
-      const saveBtn = document.getElementById('btn-save');
-      const warningBox = document.getElementById('warning-box');
-      const displayAdded = document.getElementById('display-added-ml');
-
-      if (val === '' || isNaN(currentEc)) {
-        displayAdded.textContent = '0.0';
-        warningBox.classList.add('hidden');
-        saveBtn.disabled = false;
-        return;
-      }
-
-      // Safety Guard: EC <= 0.5 or >= 3.5
-      if (currentEc <= 0.5 || currentEc >= 3.5) {
-        warningBox.classList.remove('hidden');
-        saveBtn.disabled = true;
-      } else {
-        warningBox.classList.add('hidden');
-        saveBtn.disabled = false;
-      }
-
-      // Fertilizer Dosage Formula: tankSize * (targetEc - currentEc) * 4.0
-      if (currentEc >= targetEc) {
-        displayAdded.textContent = '追肥不要 (0 mL)';
-      } else {
-        const delta = targetEc - currentEc;
-        const dosage = tankSize * delta * 4.0;
-        displayAdded.textContent = dosage.toFixed(1);
-      }
-    }
-
-    function adjustEc(delta) {
-      const input = document.getElementById('input-current-ec');
-      let val = parseFloat(input.value) || SYSTEM_CONFIG[currentSystem].targetEc;
-      val = Math.round((val + delta) * 10) / 10;
-      input.value = val.toFixed(1);
-      handleEcInput(input.value);
-    }
-
-    function setEcPreset(val) {
-      const input = document.getElementById('input-current-ec');
-      input.value = val.toFixed(1);
-      handleEcInput(input.value);
-    }
-
-    // Draft Persistence
-    function saveDraft() {
-      const draft = {
-        ec: document.getElementById('input-current-ec').value,
-        ph: document.getElementById('input-ph').value,
-        temp: document.getElementById('input-temp').value,
-        memo: document.getElementById('input-memo').value
-      };
-      localStorage.setItem(`hydro_draft_${currentSystem}`, JSON.stringify(draft));
-    }
-
-    function loadDraft() {
-      const raw = localStorage.getItem(`hydro_draft_${currentSystem}`);
-      if (raw) {
-        try {
-          const draft = JSON.parse(raw);
-          document.getElementById('input-current-ec').value = draft.ec || '';
-          document.getElementById('input-ph').value = draft.ph || '';
-          document.getElementById('input-temp').value = draft.temp || '';
-          document.getElementById('input-memo').value = draft.memo || '';
-        } catch (e) {
-          console.error('Draft load error:', e);
-        }
-      } else {
-        document.getElementById('input-current-ec').value = '';
-        document.getElementById('input-ph').value = '';
-        document.getElementById('input-temp').value = '';
-        document.getElementById('input-memo').value = '';
-      }
-      recalcFertilizer();
-    }
-
-    // Photo Picker Bottom Sheet Controllers
-    let activePhotoPickerTarget = 'record';
-
-    function openPhotoPickerSheet(target = 'record') {
-      activePhotoPickerTarget = target;
-      const sheet = document.getElementById('photo-picker-sheet');
-      if (sheet) sheet.classList.remove('hidden');
-    }
-
-    function closePhotoPickerSheet() {
-      const sheet = document.getElementById('photo-picker-sheet');
-      if (sheet) sheet.classList.add('hidden');
-    }
-
-    function triggerSheetCamera() {
-      closePhotoPickerSheet();
-      if (activePhotoPickerTarget === 'record') {
-        const input = document.getElementById('input-record-camera');
-        if (input) input.click();
-      } else {
-        triggerCameraCapture();
-      }
-    }
-
-    function triggerSheetGallery() {
-      closePhotoPickerSheet();
-      if (activePhotoPickerTarget === 'record') {
-        const input = document.getElementById('input-record-gallery');
-        if (input) input.click();
-      } else {
-        triggerGalleryPick();
-      }
-    }
-
-    // Photo Upload Handling with Canvas compression & input reset
-    async function handleRecordPhotoSelected(input) {
-      if (!input || !input.files || input.files.length === 0) return;
-      const remaining = 5 - attachedPhotos.length;
-      const filesToProcess = Array.from(input.files).slice(0, remaining);
-      for (const file of filesToProcess) {
-        if (!file.type.startsWith('image/')) continue;
-        const compressed = await compressImage(file, 1000, 0.7);
-        if (compressed) {
-          attachedPhotos.push(compressed);
-        }
-      }
-      input.value = ''; // リセットにより同一写真の再選択を保証
-      renderPhotoThumbnails();
-    }
-
-    function handlePhotoUpload(input) {
-      handleRecordPhotoSelected(input);
-    }
-
-    function renderPhotoThumbnails() {
-      const grid = document.getElementById('photo-preview-grid');
-      grid.innerHTML = '';
-      attachedPhotos.forEach((src, idx) => {
-        const div = document.createElement('div');
-        div.className = 'relative aspect-square rounded-lg overflow-hidden border border-slate-200';
-        div.innerHTML = `<img src="${src}" class="w-full h-full object-cover">
-          <button onclick="removePhoto(${idx})" class="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">✕</button>`;
-        grid.appendChild(div);
-      });
-      document.getElementById('photo-count-badge').textContent = `${attachedPhotos.length} / 5枚`;
-    }
-
-    function removePhoto(idx) {
-      attachedPhotos.splice(idx, 1);
-      renderPhotoThumbnails();
-    }
-
-    // LocalStorage Quota Guard with LRU Pruning
-    function safeSaveTimelineEntries(entries) {
-      try {
-        localStorage.setItem('hydro_timeline_entries', JSON.stringify(entries));
-        return true;
-      } catch (err) {
-        if (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014) {
-          console.warn('QuotaExceededError: 古い写真キャッシュを自動パージします');
-          const pruned = entries.map((entry, index) => {
-            if (index >= 10 && entry.photos && entry.photos.length > 0) {
-              return {
-                ...entry,
-                photos: entry.photos.filter(p => typeof p === 'string' && p.startsWith('http'))
-              };
-            }
-            return entry;
-          });
-          try {
-            localStorage.setItem('hydro_timeline_entries', JSON.stringify(pruned));
-            return true;
-          } catch (retryErr) {
-            const textOnly = entries.map(e => ({
-              ...e,
-              photos: (e.photos || []).filter(p => typeof p === 'string' && p.startsWith('http'))
-            }));
-            localStorage.setItem('hydro_timeline_entries', JSON.stringify(textOnly));
-            return true;
-          }
-        }
-        return false;
-      }
-    }
-
-    // Save Record to Timeline & GAS
-    let isRecordSubmitting = false;
-
-    async function saveRecord() {
-      if (isRecordSubmitting) return;
-
-      const currentEcVal = document.getElementById('input-current-ec').value.trim();
-      const currentEcNum = parseFloat(currentEcVal);
-      // セーフティロック確認（EC <= 0.5 または >= 3.5 は保存不可）
-      if (!isNaN(currentEcNum) && (currentEcNum <= 0.5 || currentEcNum >= 3.5)) {
-        showToast('⚠️ 異常値のため保存がロックされています');
-        return;
-      }
-
-      const saveBtn = document.getElementById('btn-save');
-      const spinner = document.getElementById('save-spinner');
-      const btnText = document.getElementById('btn-save-text');
-
-      isRecordSubmitting = true;
-      saveBtn.disabled = true;
-      spinner.classList.remove('hidden');
-      btnText.textContent = '送信中...';
-
-      const currentEc = parseFloat(currentEcVal) || 0;
-      const targetEc = SYSTEM_CONFIG[currentSystem].targetEc;
-      const addedMl = parseFloat(document.getElementById('display-added-ml').textContent) || 0;
-      const ph = parseFloat(document.getElementById('input-ph').value) || null;
-      const temp = parseFloat(document.getElementById('input-temp').value) || null;
-      const memo = document.getElementById('input-memo').value.trim();
-
-      // 1. タイムライン用エントリを生成 & 即時ローカルコミット (0ms)
-      const now = new Date();
-      const todayDateStr = now.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
-      const todayDayName = now.toLocaleDateString('ja-JP', { weekday: 'long' });
-      const newEntry = {
-        id: 'entry_' + Date.now(),
-        timestamp: now.toISOString(),
-        date: todayDateStr,
-        dayName: todayDayName,
-        system: SYSTEM_CONFIG[currentSystem].name,
-        systemKey: currentSystem,
-        ec: currentEc ? currentEc.toString() : '0',
-        targetEc: targetEc,
-        addedMl: addedMl.toFixed(1),
-        ph: ph,
-        temp: temp,
-        memo: memo,
-        photos: [...attachedPhotos],
-        source: 'record_tab'
-      };
-
-      // タイムラインLocalStorageへ追加 & 即時描画
-      try {
-        let stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
-        stored.unshift(newEntry);
-        safeSaveTimelineEntries(stored);
-        prependTimelineCard(newEntry, true);
-      } catch (e) {
-        console.warn('Timeline local commit error:', e);
-      }
-
-      // 本日ステータスを即座に更新
-      const todayKey = getTodayKey();
-      const status = JSON.parse(localStorage.getItem(todayKey) || '{}');
-      status[currentSystem] = true;
-      localStorage.setItem(todayKey, JSON.stringify(status));
-      updateDailyStatusBadges();
-
-      // 下書きクリアとフォームリセット
-      localStorage.removeItem(`hydro_draft_${currentSystem}`);
-      document.getElementById('input-current-ec').value = '';
-      document.getElementById('input-memo').value = '';
-      document.getElementById('display-added-ml').textContent = '0.0';
-      attachedPhotos = [];
-      renderPhotoThumbnails();
-
-      // 成功トースト
-      showToast('✅ 記録を保存しました！');
-
-      // 2. GAS Web Appへの非同期送信 (Simple Request & CORSフリー)
-      const payload = {
-        action: 'save_record',
-        id: newEntry.id,
-        timestamp: newEntry.timestamp,
-        date: newEntry.date,
-        dayName: newEntry.dayName,
-        system: currentSystem,
-        system_id: currentSystem,
-        systemName: SYSTEM_CONFIG[currentSystem].name,
-        currentEc: currentEc,
-        current_ec: currentEc,
-        ec: currentEc,
-        targetEc: targetEc,
-        target_ec: targetEc,
-        addedMl: addedMl,
-        added_ml: addedMl,
-        ph: ph,
-        temp: temp,
-        water_temp: temp,
-        memo: memo,
-        photosCount: newEntry.photos.length,
-        photos: newEntry.photos
-      };
-
-      try {
-        const gasEndpoint = getGasEndpoint();
-        const response = await fetch(gasEndpoint, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-      } catch (err) {
-        console.error('Save failed:', err);
-        // ネットワーク切断(test_07)の場合はエラートーストを表示してテスト期待値と整合
-        showToast('❌ 接続に失敗しました。設定を確認してください。');
-      } finally {
-        isRecordSubmitting = false;
-        saveBtn.disabled = false;
-        spinner.classList.add('hidden');
-        btnText.textContent = '記録をGoogleシートに保存';
-      }
-    }
-
-    // Pesticide Mode Logic
-    const PEST_PRESETS = {
-      nenchakukun: { dilution: 100, desc: '対象: アブラムシ類、ハダニ類、コナジラミ類、うどんこ病 (デンプン系物理防除)' },
-      sanyol: { dilution: 500, desc: '対象: うどんこ病、灰色かび病、コナジラミ類、ハダニ類 (DBEDC乳剤)' },
-      wide_hitter: { dilution: 1000, desc: '対象: 殺菌: うどんこ病、べと病、疫病 (TPN・イミノクタジン顆粒水和剤)' },
-      zentari: { dilution: 1000, desc: '対象: BT殺虫: アオムシ、コナガ、オオタバコガ、ヨトウムシ (顆粒水和剤)' },
-      malathon: { dilution: 1000, desc: '対象: 殺虫: アブラムシ類、ハダニ類、スリップス、カメムシ (有機リン系)' },
-      koromite: { dilution: 1000, desc: '対象: 殺ダニ: ハダニ類、サビダニ類 (ミルベメクチン乳剤)' },
-      prevathon: { dilution: 2000, desc: '対象: 殺虫: オオタバコガ、コナガ、ハモグリバエ (フロアブル5)' },
-      dyne: { dilution: 5000, desc: '展着剤: 散布水1Lあたり0.2mL (数滴)。濡れ性を高め効果を安定化。' }
-    };
-
-    function onPesticideSelect(key) {
-      if (key === 'custom') {
-        document.getElementById('pesticide-details-badge').textContent = 'カスタム手動指定モード';
-        return;
-      }
-      const preset = PEST_PRESETS[key];
-      if (preset) {
-        document.getElementById('input-dilution').value = preset.dilution;
-        document.getElementById('pesticide-details-badge').textContent = preset.desc;
-        calculatePesticide();
-      }
-    }
-
-    function calculatePesticide() {
-      const waterMl = parseFloat(document.getElementById('input-water-ml').value) || 0;
-      const dilution = parseFloat(document.getElementById('input-dilution').value) || 1;
-      const amt = waterMl / dilution;
-      document.getElementById('display-pesticide-ml').textContent = amt.toFixed(1);
-      document.getElementById('pesticide-formula-desc').textContent = `${waterMl} mL ÷ ${dilution}倍 = ${amt.toFixed(1)} mL`;
-    }
-
-    function copyToMemo() {
-      const pestName = document.getElementById('select-pesticide-preset').options[document.getElementById('select-pesticide-preset').selectedIndex].text.split('(')[0].trim();
-      const waterMl = document.getElementById('input-water-ml').value;
-      const dilution = document.getElementById('input-dilution').value;
-      const amt = document.getElementById('display-pesticide-ml').textContent;
-      const text = `【防除】${pestName} ${amt}mL/g (水${waterMl}mL・${dilution}倍)`;
-      const memo = document.getElementById('input-memo');
-      memo.value = memo.value ? memo.value + '\n' + text : text;
-      saveDraft();
-      showToast('✅ 日誌メモに防除配合を挿入しました！');
-      switchTab('record');
-    }
-
-    // Toast UI
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.classList.remove('hidden');
-      setTimeout(() => toast.classList.add('hidden'), 3500);
-    }
-
-    // Plan Editor
-    function openPlanEditor(year, month) {
-      document.getElementById('plan-modal-title').innerText = `${year}年 ${month}月の計画`;
-      document.getElementById('plan-editor-modal').classList.remove('hidden');
-    }
-
-    function closePlanEditor() {
-      document.getElementById('plan-editor-modal').classList.add('hidden');
-    }
-
-    function savePlanEntry() {
-      showToast(`✅ ${document.getElementById('plan-modal-title').innerText} をスプレッドシートに保存しました！`);
-      closePlanEditor();
-    }
-
-    // Journal Entry & Timeline Flow
-    let selectedPhotos = [];
-
-    // 🖼️ ギャラリー直接起動（写真がずらっと並んでポチポチ選べる）
-    function triggerGalleryPick() {
-      const input = document.getElementById('input-gallery-pick');
-      if (input) input.click();
-    }
-
-    // 📸 カメラ直接起動（現場で今すぐ撮影）
-    function triggerCameraCapture() {
-      const input = document.getElementById('input-camera-capture');
-      if (input) input.click();
-    }
-
-    function openEditorWithPhoto() {
-      triggerGalleryPick();
-    }
-
-    function openJournalEditor() {
-      delete document.getElementById('journal-editor-modal').dataset.editId;
-      const delBtn = document.getElementById('btn-delete-from-editor');
-      if (delBtn) delBtn.classList.add('hidden');
-      selectedPhotos = [];
-      renderEditorThumbnails();
-      document.getElementById('editor-textarea').value = '';
-      if (document.getElementById('editor-char-count')) {
-        document.getElementById('editor-char-count').innerText = '0文字';
-      }
-      document.getElementById('journal-editor-modal').classList.remove('hidden');
-      document.getElementById('editor-textarea').focus();
-    }
-
-    function openEditorWithText() {
-      openJournalEditor();
-    }
-
-    function closeJournalEditor() {
-      delete document.getElementById('journal-editor-modal').dataset.editId;
-      const delBtn = document.getElementById('btn-delete-from-editor');
-      if (delBtn) delBtn.classList.add('hidden');
-      document.getElementById('journal-editor-modal').classList.add('hidden');
-    }
-
-    // 端末ファイル選択ハンドラ（複数枚対応・自動Canvas圧縮）
-    async function handleGallerySelected(input) {
-      if (!input.files || input.files.length === 0) return;
-      for (const file of Array.from(input.files)) {
-        if (!file.type.startsWith('image/')) continue;
-        const compressedBase64 = await compressImage(file, 1200, 0.8);
-        selectedPhotos.push(compressedBase64);
-      }
-      input.value = ''; // リセット
-
-      // エディタを開いてサムネイルを描画
-      renderEditorThumbnails();
-      const delBtn = document.getElementById('btn-delete-from-editor');
-      if (!document.getElementById('journal-editor-modal').dataset.editId && delBtn) {
-        delBtn.classList.add('hidden');
-      }
-      document.getElementById('journal-editor-modal').classList.remove('hidden');
-      document.getElementById('editor-textarea').focus();
-    }
-
-    // クライアント側Canvas画像圧縮ユーティリティ（長辺1200px・JPEG 0.8）
-    function compressImage(file, maxSide, quality) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            let w = img.width;
-            let h = img.height;
-            if (w > h && w > maxSide) {
-              h = Math.round((h * maxSide) / w);
-              w = maxSide;
-            } else if (h > maxSide) {
-              w = Math.round((w * maxSide) / h);
-              h = maxSide;
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', quality));
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    // 写真トレイのレンダリング
-    function renderEditorThumbnails() {
-      const tray = document.getElementById('editor-thumbnails');
-      if (!tray) return;
-      tray.innerHTML = '';
-
-      // 選択済みの写真サムネイル
-      selectedPhotos.forEach((src, idx) => {
-        const div = document.createElement('div');
-        div.className = 'relative w-16 h-16 rounded-xl overflow-hidden border-2 border-emerald-400 flex-shrink-0 shadow-xs';
-        div.innerHTML = `<img src="${src}" class="w-full h-full object-cover">
-          <button onclick="removeEditorPhoto(${idx})" class="absolute top-0.5 right-0.5 bg-black/70 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] transition font-bold">✕</button>`;
-        tray.appendChild(div);
-      });
-
-      // ＋ボタン（直接ギャラリーを開いてさらにポチポチ追加！）
-      const addBtn = document.createElement('button');
-      addBtn.onclick = triggerGalleryPick;
-      addBtn.id = 'btn-picker-add-more';
-      addBtn.className = 'w-16 h-16 rounded-xl border-2 border-dashed border-gray-300 hover:border-sky-500 hover:bg-sky-50/50 text-gray-400 hover:text-sky-600 flex flex-col items-center justify-center flex-shrink-0 transition active:scale-95 cursor-pointer';
-      addBtn.innerHTML = '<span class="text-xl font-bold">＋</span><span class="text-[9px] font-semibold text-gray-400">写真追加</span>';
-      tray.appendChild(addBtn);
-    }
-
-    function removeEditorPhoto(idx) {
-      selectedPhotos.splice(idx, 1);
-      renderEditorThumbnails();
-    }
-
-    // タイムライン保存 & 動的反映
-    function saveJournalEntry() {
-      const editId = document.getElementById('journal-editor-modal').dataset.editId;
-      const text = document.getElementById('editor-textarea').value.trim();
-      if (!text && selectedPhotos.length === 0) {
-        alert('メモまたは写真を入力してください');
-        return;
-      }
-
-      const sysName = (typeof currentSystem !== 'undefined' && SYSTEM_CONFIG && SYSTEM_CONFIG[currentSystem]) 
-        ? SYSTEM_CONFIG[currentSystem].name 
-        : 'BatoBucket';
-      const currentEc = document.getElementById('input-current-ec')?.value || '2.0';
-
-      let stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
-      let newEntry;
-
-      if (editId) {
-        const existingIdx = stored.findIndex(e => e.id === editId);
-        const existing = existingIdx >= 0 ? stored[existingIdx] : {};
-        newEntry = {
-          ...existing,
-          memo: text,
-          photos: [...selectedPhotos],
-          timestamp: new Date().toISOString()
-        };
-        if (existingIdx >= 0) {
-          stored[existingIdx] = newEntry;
-        } else {
-          stored.unshift(newEntry);
-        }
-      } else {
-        newEntry = {
-          id: 'entry_' + Date.now(),
-          date: new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }),
-          dayName: new Date().toLocaleDateString('ja-JP', { weekday: 'long' }),
-          system: sysName,
-          ec: currentEc,
-          memo: text,
-          photos: [...selectedPhotos],
-          timestamp: new Date().toISOString()
-        };
-        stored.unshift(newEntry);
-      }
-
-      // 1. LocalStorageに保存 (クォータ防護付き)
-      safeSaveTimelineEntries(stored);
-
-      // 2. タイムライン再描画または先頭追加
-      if (editId) {
-        renderSavedTimelineEntries(stored);
-      } else {
-        prependTimelineCard(newEntry, true);
-      }
-
-      // 3. GAS URL連携時は非同期バックグラウンド送信 (CORSフリー Simple Request)
-      const gasUrl = (typeof getGasEndpoint === 'function') ? getGasEndpoint() : null;
-      if (gasUrl) {
-        fetch(gasUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'journal',
-            id: newEntry.id,
-            timestamp: newEntry.timestamp,
-            date: newEntry.date,
-            dayName: newEntry.dayName,
-            system: newEntry.system,
-            ec: newEntry.ec,
-            memo: newEntry.memo,
-            photos: newEntry.photos
-          })
-        }).catch(err => console.warn('Background sync failed:', err));
-      }
-
-      // Update daily status if journal is system-specific
-      if (currentSystem) {
-        const todayKey = getTodayKey();
-        const status = JSON.parse(localStorage.getItem(todayKey) || '{}');
-        status[currentSystem] = true;
-        localStorage.setItem(todayKey, JSON.stringify(status));
-        updateDailyStatusBadges();
-      }
-      showToast('✅ 日誌を保存しました！');
-      closeJournalEditor();
-      document.getElementById('editor-textarea').value = '';
-      selectedPhotos = [];
-      switchTab('timeline');
-    }
-
-    function deleteFromEditorModal() {
-      const editId = document.getElementById('journal-editor-modal').dataset.editId;
-      if (!editId) return;
-      closeJournalEditor();
-      deleteJournalEntry(editId);
-    }
-
-    function deleteJournalEntry(entryId) {
-      if (!entryId) return;
-      const ok = window.confirm('この日誌を削除しますか？\n（写真やメモが完全に削除されます）');
-      if (!ok) return;
-
-      // 1. LocalStorage ('hydro_timeline_entries') から該当IDのエントリを削除
-      let stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
-      const targetEntry = stored.find(e => e.id === entryId);
-      stored = stored.filter(e => e.id !== entryId);
-      localStorage.setItem('hydro_timeline_entries', JSON.stringify(stored));
-
-      // 2. ゾンビ復活防止: LocalStorage ('hydro_deleted_journal_ids') に entryId を追加保存
-      let deletedIds = JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]');
-      if (!deletedIds.includes(entryId)) {
-        deletedIds.push(entryId);
-        localStorage.setItem('hydro_deleted_journal_ids', JSON.stringify(deletedIds));
-      }
-
-      // 3. DOMから該当カードを即座に削除
-      const card = document.querySelector(`article[data-entry-id="${entryId}"]`);
-      if (card) {
-        card.remove();
-      }
-
-      // 4. 本日の日誌ステータスの再判定
-      const todayDateStr = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
-      const todayRemainingForCurrentSys = stored.filter(e => {
-        const eDate = e.date || '';
-        return eDate === todayDateStr && (!targetEntry || e.system === targetEntry.system);
-      });
-      if (todayRemainingForCurrentSys.length === 0 && targetEntry && targetEntry.system) {
-        const sysKey = Object.keys(SYSTEM_CONFIG).find(k => SYSTEM_CONFIG[k].name === targetEntry.system);
-        if (sysKey) {
-          const todayKey = getTodayKey();
-          const status = JSON.parse(localStorage.getItem(todayKey) || '{}');
-          delete status[sysKey];
-          localStorage.setItem(todayKey, JSON.stringify(status));
-          updateDailyStatusBadges();
-        }
-      }
-
-      // 5. GASエンドポイントへの非同期削除送信
-      const gasUrl = (typeof getGasEndpoint === 'function') ? getGasEndpoint() : null;
-      if (gasUrl) {
-        fetch(gasUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'delete_journal',
-            id: entryId
-          })
-        }).catch(err => console.warn('Background delete failed:', err));
-      }
-
-      showToast('🗑️ 日誌を削除しました');
-    }
-
-    function prependTimelineCard(entry, isPrepend) {
-      const container = document.getElementById('timeline-feed-container');
-      if (!container) return;
-      const article = document.createElement('article');
-      article.className = 'timeline-card dynamic-timeline-card bg-white p-5 rounded-2xl border shadow-sm space-y-3 transition-all';
-      if (entry.id) article.dataset.entryId = entry.id;
-      
-      let photoHtml = '';
-      if (entry.photos && entry.photos.length > 0) {
-        photoHtml = `<div class="flex gap-2 pt-1 overflow-x-auto no-scrollbar">` +
-          entry.photos.map((p, i) => `<img src="${p}" onclick="openLightboxFromTimeline(${i}, '${entry.id}')" class="w-20 h-20 rounded-xl object-cover border cursor-pointer hover:opacity-90">`).join('') +
-          `</div>`;
-      }
-
-      let displayDate = entry.date || '';
-      let displayDay = entry.dayName || '';
-      if (displayDate && !displayDate.includes('年')) {
-        const d = new Date(entry.timestamp || displayDate);
-        if (!isNaN(d.getTime())) {
-          displayDate = d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
-          if (!displayDay) displayDay = d.toLocaleDateString('ja-JP', { weekday: 'long' });
-        }
-      }
-
-      article.innerHTML = `
-        <div class="flex items-center justify-between border-b pb-2">
-          <div>
-            <h3 class="text-xl font-black text-gray-900">${displayDate}</h3>
-            <span class="text-xs text-gray-500 font-semibold">${displayDay}</span>
-          </div>
-          <div class="flex flex-wrap items-center gap-1.5">
-            <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200">
-              ${entry.system || '水耕日誌'} | EC: ${entry.ec || '-'}
-            </span>
-            ${entry.addedMl ? `<span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">💧 追肥: 各${entry.addedMl} mL</span>` : ''}
-            ${entry.temp ? `<span class="text-xs bg-sky-50 text-sky-700 font-bold px-2 py-0.5 rounded-full">🌡️ ${entry.temp}℃</span>` : ''}
-            ${entry.ph ? `<span class="text-xs bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-full">🧪 pH ${entry.ph}</span>` : ''}
-          </div>
-        </div>
-        <div class="flex justify-between items-center pt-1">
-          <p class="text-sm leading-relaxed text-gray-800 whitespace-pre-wrap flex-1">${entry.memo || ''}</p>
-          <div class="flex items-center ml-2">
-            <button onclick="openEditorForEdit('${entry.id}')" class="btn-edit-journal p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-gray-100 rounded-full transition" title="編集">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
-            <button onclick="deleteJournalEntry('${entry.id}')" data-entry-id="${entry.id}" class="btn-delete-journal ml-1 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition" title="削除">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        ${photoHtml}
-      `;
-
-      if (isPrepend) {
-        container.prepend(article);
-      } else {
-        container.appendChild(article);
-      }
-    }
-
-    function renderSavedTimelineEntries(entries = null) {
-      try {
-        const container = document.getElementById('timeline-feed-container');
-        if (!container) return;
-        const existingDynamic = container.querySelectorAll('.dynamic-timeline-card');
-        existingDynamic.forEach(el => el.remove());
-
-        const deletedIds = new Set(JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]'));
-        let stored = entries || JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
-        stored = stored.filter(e => !deletedIds.has(e.id));
-        if (Array.isArray(stored) && stored.length > 0) {
-          for (let i = stored.length - 1; i >= 0; i--) {
-            prependTimelineCard(stored[i], true);
-          }
-        }
-      } catch (e) {
-        console.warn('Render saved timeline entries failed:', e);
-      }
-    }
-
-    async function syncTimelineFromGas(isSilent = false) {
-      const syncBtn = document.getElementById('btn-sync-timeline');
-      const syncSpinner = document.getElementById('sync-spinner');
-      const syncStatus = document.getElementById('timeline-sync-status');
-
-      if (syncSpinner) syncSpinner.classList.add('animate-spin');
-      if (syncStatus) {
-        syncStatus.className = 'text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200';
-        syncStatus.innerText = '⏳ 同期中...';
-      }
-
-      const gasUrl = (typeof getGasEndpoint === 'function') ? getGasEndpoint() : DEFAULT_GAS_ENDPOINT;
-      const separator = gasUrl.includes('?') ? '&' : '?';
-      const reqUrl = gasUrl + separator + 'action=get_timeline';
-
-      try {
-        const res = await fetch(reqUrl);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-
-        if (data && data.status === 'success' && Array.isArray(data.entries)) {
-          const localEntries = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
-          const deletedIds = new Set(JSON.parse(localStorage.getItem('hydro_deleted_journal_ids') || '[]'));
-          const entryMap = new Map();
-
-          // ローカルの未送信データを保護（削除済みIDは除外）
-          localEntries.forEach(entry => {
-            if (entry && entry.id && !deletedIds.has(entry.id)) {
-              entryMap.set(entry.id, entry);
-            }
-          });
-
-          // クラウドのデータで更新（削除済みIDはゾンビ復活防止のためスキップ）
-          data.entries.forEach(entry => {
-            if (entry && entry.id && !deletedIds.has(entry.id)) {
-              entryMap.set(entry.id, {
-                ...entry,
-                photos: Array.isArray(entry.photos) ? entry.photos : []
-              });
-            }
-          });
-
-          const mergedEntries = Array.from(entryMap.values());
-          mergedEntries.sort((a, b) => {
-            const timeA = a.timestamp || a.date || '';
-            const timeB = b.timestamp || b.date || '';
-            return timeB.localeCompare(timeA);
-          });
-
-          localStorage.setItem('hydro_timeline_entries', JSON.stringify(mergedEntries));
-          renderSavedTimelineEntries(mergedEntries);
-
-          if (syncStatus) {
-            syncStatus.className = 'text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200';
-            syncStatus.innerText = `🟢 同期済 (${mergedEntries.length}件)`;
-          }
-          if (!isSilent) showToast(`✅ クラウドと同期完了 (${mergedEntries.length}件)`);
-        } else {
-          throw new Error((data && data.message) || '同期レスポンスが不正です');
-        }
-      } catch (err) {
-        console.warn('Timeline sync failed:', err);
-        if (syncStatus) {
-          syncStatus.className = 'text-xs font-bold text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-200';
-          syncStatus.innerText = '⚠️ オフライン表示';
-        }
-        if (!isSilent) showToast('⚠️ オフラインまたは同期エラー（ローカルデータを表示中）');
-      } finally {
-        if (syncSpinner) syncSpinner.classList.remove('animate-spin');
-      }
-    }
-
-    function insertTag(tag) {
-      const ta = document.getElementById('editor-textarea');
-      ta.value += ' ' + tag + ' ';
-      ta.focus();
-    }
-
-    if (document.getElementById('editor-textarea')) {
-      document.getElementById('editor-textarea').addEventListener('input', (e) => {
-        document.getElementById('editor-char-count').innerText = `${e.target.value.length}文字`;
-      });
-    }
-
-    // Timeline Photo Lightbox
-    function openLightboxFromTimeline(idx, entryId) {
-      const stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
-      const entry = stored.find(e => e.id === entryId);
-      if (entry && entry.photos) {
-        photoList = entry.photos.map((p, i) => ({
-          src: p,
-          caption: `${entry.date} | ${entry.system || '日誌'} (${i + 1}/${entry.photos.length})`
-        }));
-        openLightbox(idx);
-      }
-    }
-
-    // Journal Editor for Edit
-    function openEditorForEdit(entryId) {
-      const stored = JSON.parse(localStorage.getItem('hydro_timeline_entries') || '[]');
-      const entry = stored.find(e => e.id === entryId);
-      if (entry) {
-        document.getElementById('editor-textarea').value = entry.memo || '';
-        document.getElementById('editor-char-count').innerText = `${entry.memo?.length || 0}文字`;
-        selectedPhotos = [...(entry.photos || [])];
-        renderEditorThumbnails();
-        
-        // Save the entry ID for update & show editor delete button
-        document.getElementById('journal-editor-modal').dataset.editId = entryId;
-        const delBtn = document.getElementById('btn-delete-from-editor');
-        if (delBtn) delBtn.classList.remove('hidden');
-        document.getElementById('journal-editor-modal').classList.remove('hidden');
-      }
-    }
-
-    // Photo Gallery Lightbox
-    let photoList = [
-      { src: "https://images.unsplash.com/photo-1592417817098-8f3d6910985c?w=1000", caption: "2026年9月27日 | ナス収穫 (BatoBucket)" },
-      { src: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1000", caption: "2026年9月15日 | サンチュ・小松菜 (DWC)" },
-      { src: "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=1000", caption: "2026年8月25日 | PC筑陽ナス (BatoBucket)" },
-      { src: "https://images.unsplash.com/photo-1563514227147-6d2ff665a6a0?w=1000", caption: "2026年8月24日 | ツルムラサキ旺盛 (DWC)" }
-    ];
-
-    let currentPhotoIdx = 0;
-
-    function openLightbox(idx) {
-      currentPhotoIdx = idx;
-      updateLightbox();
-      document.getElementById('photo-modal').classList.remove('hidden');
-    }
-
-    function closeLightbox() {
-      document.getElementById('photo-modal').classList.add('hidden');
-    }
-
-    function updateLightbox() {
-      const p = photoList[currentPhotoIdx];
-      document.getElementById('modal-img').src = p.src;
-      document.getElementById('modal-caption').innerText = p.caption;
-      document.getElementById('modal-counter').innerText = `${currentPhotoIdx + 1} / ${photoList.length}`;
-    }
-
-    function prevPhoto() {
-      currentPhotoIdx = (currentPhotoIdx - 1 + photoList.length) % photoList.length;
-      updateLightbox();
-    }
-
-    function nextPhoto() {
-      currentPhotoIdx = (currentPhotoIdx + 1) % photoList.length;
-      updateLightbox();
-    }
-
-    window.addEventListener('keydown', (e) => {
-      const modal = document.getElementById('photo-modal');
-      if (!modal || modal.classList.contains('hidden')) return;
-      if (e.key === 'ArrowLeft') prevPhoto();
-      if (e.key === 'ArrowRight') nextPhoto();
-      if (e.key === 'Escape') closeLightbox();
-    });
-
-    // Timeline Search Filter
-    function filterTimeline() {
-      const q = document.getElementById('timeline-search').value.toLowerCase().trim();
-      document.querySelectorAll('.timeline-card').forEach(card => {
-        const text = card.innerText.toLowerCase();
-        if (!q || text.includes(q)) {
-          card.style.display = 'block';
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    }
-  </script>
+    store(K.records, records);
+  } catch (e) { ok = false; }
+  try {
+    const d = await getJson('get_plans');
+    const seen = {};
+    (d.plans || []).forEach(p => { seen[p.id] = true; if (pend.has(p.id)) return; const cur = plans[p.id]; if (!cur || (p.updatedAt || '') >= (cur.updatedAt || '')) plans[p.id] = p; });
+    Object.keys(plans).forEach(id => { if (!seen[id] && !pend.has(id)) delete plans[id]; });
+    store(K.plans, plans);
+  } catch (e) { ok = false; }
+  try { const d = await getJson('get_settings'); cache.settings = d.settings || {}; cache.pesticides = d.pesticides || []; cache.sprayCounts = d.sprayCounts || {}; } catch (e) { ok = false; }
+  try { const d = await getJson('get_today'); cache.today = d.items || []; } catch (e) { ok = false; }
+  store(K.cache, cache);
+  renderAll();
+  if (userAsked) toast(ok ? 'シートと同期しました' : '同期できませんでした（端末の記録を表示しています）');
+}
+
+/* ---------- v1.9 の端末の記録を送り直す ----------
+ * 古い置き場（hydro_timeline_entries・hydro_deleted_journal_ids）は列に写さない（写すと場所が2倍いる。辛口審査 C2）。
+ * 送るたびに古い置き場から組み立て、シートが受け取った id だけを小さな控え（hydro_v2_legacy_acked）に書く。
+ * 全部受け取ってもらえたら、古い置き場を消して「done」にする。
+ */
+let legacyCache = null;
+const legacyMem = new Set();
+function legacyAcked() { const s = new Set(load('hydro_v2_legacy_acked', [])); legacyMem.forEach(k => s.add(k)); return s; }
+function legacyAck(key) { legacyMem.add(key); store('hydro_v2_legacy_acked', Array.from(legacyAcked())); legacyCache = null; }
+function legacyOps() {
+  if (raw(K.migrated) === 'done') return [];
+  if (legacyCache) return legacyCache;
+  const old = load('hydro_timeline_entries', []);
+  const delIds = load('hydro_deleted_journal_ids', []);
+  const acked = legacyAcked();
+  const ops = [];
+  (Array.isArray(old) ? old : []).forEach(e => {
+    if (!e || !e.id || (Array.isArray(delIds) && delIds.indexOf(e.id) >= 0) || acked.has('u:' + e.id)) return;
+    const k = e.systemKey || keyOf(e.system);
+    ops.push({ _legacy: true, _key: 'u:' + e.id, action: 'upsert', record: {
+      id: String(e.id), date: toDateStr(e.date) || toDateStr(e.timestamp) || today(), time: '', systemKey: k, system: k ? SYS[k].name : String(e.system || ''),
+      kind: e.source === 'record_tab' ? '液肥' : '日誌', ec: num(e.ec), ph: num(e.ph), temp: num(e.temp !== undefined ? e.temp : e.waterTemp), targetEc: num(e.targetEc), addedMl: num(e.addedMl),
+      pestName: '', dilution: '', waterL: '', dose: '', unit: '', memo: String(e.memo || ''), photos: Array.isArray(e.photos) ? e.photos : [],
+      updatedAt: e.timestamp && !isNaN(new Date(e.timestamp)) ? new Date(e.timestamp).toISOString() : '2026-01-01T00:00:00.000Z'
+    } });
+  });
+  (Array.isArray(delIds) ? delIds : []).forEach(id => { if (!acked.has('d:' + id)) ops.push({ _legacy: true, _key: 'd:' + id, action: 'delete', id: String(id), updatedAt: nowIso() }); });
+  legacyCache = ops;
+  return ops;
+}
+function finishLegacy() {
+  if (raw(K.migrated) === 'done') return;
+  legacyCache = null;
+  if (legacyOps().length) return;
+  // シートが全部受け取ったので、古い置き場を片付けて端末の場所を空ける
+  try { ['hydro_timeline_entries', 'hydro_deleted_journal_ids', 'hydro_v2_legacy_acked'].forEach(k => localStorage.removeItem(k)); localStorage.setItem(K.migrated, 'done'); } catch (e) {}
+  legacyCache = null;
+}
+
+/* ---------- 今日やること ---------- */
+function renderToday() {
+  const items = cache.today || [];
+  const box = document.getElementById('today-list');
+  const props = Object.values(plans).filter(p => p.status === '提案' && !p.deleted).length;
+  let html = items.map((it, i) => {
+    const col = it.system && SYS[it.system] ? SYS[it.system].color : 'var(--all)';
+    const btn = it.type === '予定' && it.planId ? `<button onclick="donePlan('${esc(it.planId)}')">済</button>` : (it.system && SYS[it.system] ? `<button onclick="startRecord('${it.system}','${it.type === '水替え' ? '水替え' : '液肥'}')">記録</button>` : '');
+    return `<div class="task"><i class="sys" style="background:${col}"></i><div><div class="t">${esc(it.title)}</div><div class="d">${esc(it.detail || '')}</div></div>${btn}</div>`;
+  }).join('');
+  if (props) html += `<div class="task"><i class="sys" style="background:var(--water)"></i><div><div class="t">AIからの提案が ${props} 件あります</div><div class="d">予定の画面で「採用」か「やめる」を選んでください</div></div><button onclick="go('v-plan')">見る</button></div>`;
+  box.innerHTML = html || '<p class="empty">今日はとくにありません。</p>';
+}
+function startRecord(k, kd) { pickSys(k); pickKind(kd); document.getElementById('ec-input').focus(); }
+
+/* ---------- 見返し ---------- */
+function liveRecords() { return Object.values(records).filter(r => r && !r.deleted && r.date).sort((a, b) => (b.date + (b.time || '') + (b.updatedAt || '')).localeCompare(a.date + (a.time || '') + (a.updatedAt || ''))); }
+function renderFilters() {
+  const sysChips = [['all', 'すべて']].concat(Object.keys(SYS).map(k => [k, SYS[k].short]));
+  document.getElementById('filter-sys').innerHTML = sysChips.map(([v, l]) => `<button class="chip" data-filter-sys="${v}" aria-pressed="${fSys === v}" onclick="fSys='${v}';historyLimit=50;renderHistory()">${l}</button>`).join('');
+  const kinds = [['all', 'すべて'], ['液肥', '液肥'], ['水替え', '水替え'], ['農薬', '農薬'], ['日誌', '日誌'], ['photo', '写真あり']];
+  document.getElementById('filter-kind').innerHTML = kinds.map(([v, l]) => `<button class="chip" data-filter-kind="${v}" aria-pressed="${fKind === v}" onclick="fKind='${v}';historyLimit=50;renderHistory()">${l}</button>`).join('');
+}
+function recLine(r) {
+  if (r.kind === '農薬') return `${esc(r.pestName)} ${esc(r.dose)} ${esc(r.unit)}（${esc(r.dilution)}倍・水${esc(r.waterL)}L）`;
+  const parts = [];
+  if (r.ec !== '' && r.ec !== undefined) parts.push('EC ' + r.ec + (r.kind === '液肥' && Number(r.addedMl) > 0 ? ' → 追肥 各 ' + r.addedMl + ' mL' : ''));
+  if (r.ph !== '' && r.ph !== undefined) parts.push('pH ' + r.ph);
+  if (r.temp !== '' && r.temp !== undefined) parts.push('水温 ' + r.temp + '℃');
+  if (r.kind === '水替え') parts.unshift('水を入れかえた');
+  return esc(parts.join('　'));
+}
+function renderHistory() {
+  renderFilters();
+  const pend = pendingIds();
+  let list = liveRecords();
+  if (fSys !== 'all') list = list.filter(r => r.systemKey === fSys);
+  if (fKind === 'photo') list = list.filter(r => r.photos && r.photos.length);
+  else if (fKind !== 'all') list = list.filter(r => r.kind === fKind);
+  renderChart();
+  const shown = list.slice(0, historyLimit);
+  let html = '', cur = '';
+  shown.forEach(r => {
+    if (r.date !== cur) { if (cur) html += '</div>'; cur = r.date; html += `<div class="day"><div class="dh">${jpDate(r.date)}</div>`; }
+    const col = SYS[r.systemKey] ? SYS[r.systemKey].color : 'var(--all)';
+    const pr = pend.has(r.id) ? pendingRecord(r.id) : null;
+    const ph = ((pr && pr.photos) || r.photos || []).map(p => `<a href="${esc(p)}" target="_blank" rel="noopener"><img src="${esc(p)}" alt="写真" loading="lazy"></a>`).join('');
+    html += `<div class="rec" data-id="${esc(r.id)}"><i class="bar" style="background:${col}"></i><div class="body"><div class="k">${esc(SYS[r.systemKey] ? SYS[r.systemKey].short : '全体')}・${esc(r.kind)}${r.time ? '　' + esc(r.time) : ''}</div>` +
+      (recLine(r) ? `<div class="v">${recLine(r)}</div>` : '') + (r.memo ? `<div class="m">${esc(r.memo)}</div>` : '') + (ph ? `<div class="ph">${ph}</div>` : '') +
+      (pend.has(r.id) ? '<div class="pend">未送信（電波が戻ったら送ります）</div>' : '') +
+      `</div><div class="act"><button data-act="edit" onclick="openEdit('${esc(r.id)}')">直す</button></div></div>`;
+  });
+  if (cur) html += '</div>';
+  document.getElementById('history-list').innerHTML = html;
+  document.getElementById('history-empty').hidden = list.length > 0;
+  document.getElementById('btn-more').hidden = list.length <= historyLimit;
+}
+function renderChart() {
+  const from = today(-29);
+  const W = 340, H = 170, x0 = 34, x1 = 330, y = v => 138 - (v - 1.0) / 1.5 * 120;
+  const dayIdx = s => { const a = new Date(from + 'T00:00:00'), b = new Date(s + 'T00:00:00'); return Math.round((b - a) / 86400000); };
+  const X = s => x0 + (x1 - x0) * dayIdx(s) / 29;
+  const tgts = Object.keys(SYS).map(k => sysCfg(k).target);
+  const lo = Math.min(...tgts), hi = Math.max(...tgts);
+  let lines = '', legend = [];
+  Object.keys(SYS).forEach(k => {
+    if (fSys !== 'all' && fSys !== k) return;
+    const pts = liveRecords().filter(r => r.systemKey === k && r.kind === '液肥' && r.ec !== '' && r.ec !== undefined && r.date >= from).sort((a, b) => a.date.localeCompare(b.date));
+    if (!pts.length) return;
+    const p = pts.map(r => X(r.date).toFixed(1) + ',' + Math.max(10, Math.min(150, y(Number(r.ec)))).toFixed(1)).join(' ');
+    lines += `<polyline fill="none" stroke="${SYS[k].color}" stroke-width="3" ${k === 'dwc' ? 'stroke-dasharray="6 4"' : ''} points="${p}"/>` + pts.map(r => `<circle cx="${X(r.date).toFixed(1)}" cy="${Math.max(10, Math.min(150, y(Number(r.ec)))).toFixed(1)}" r="3.5" fill="${SYS[k].color}"/>`).join('');
+    legend.push((k === 'dwc' ? '‐‐ ' : '— ') + SYS[k].short);
+  });
+  const box = document.getElementById('chart-box');
+  if (!lines) { box.innerHTML = '<p class="empty">この30日の液肥の記録がまだありません。</p>'; return; }
+  box.innerHTML = `<svg class="chart" id="ec-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="系統ごとのECの折れ線">
+    <rect x="${x0}" y="${y(hi + 0.1)}" width="${x1 - x0}" height="${y(lo - 0.1) - y(hi + 0.1)}" fill="#DCEEF1" opacity=".6"/>
+    <g font-size="10" fill="#53625F"><text x="4" y="22">2.5</text><text x="4" y="62">2.0</text><text x="4" y="102">1.5</text><text x="4" y="142">1.0</text></g>
+    <g stroke="#E3EBE8"><line x1="${x0}" y1="18" x2="${x1}" y2="18"/><line x1="${x0}" y1="58" x2="${x1}" y2="58"/><line x1="${x0}" y1="98" x2="${x1}" y2="98"/><line x1="${x0}" y1="138" x2="${x1}" y2="138"/></g>
+    ${lines}
+    <g font-size="10" fill="#53625F"><text x="${x0}" y="162">${md(from)}</text><text x="170" y="162">${md(today(-15))}</text><text x="296" y="162">${md(today())}</text></g></svg>
+    <div class="chartnote">${legend.join('　')}　帯は目標ECのあたり（${lo.toFixed(1)}〜${hi.toFixed(1)}）</div>`;
+}
+function openEdit(id) {
+  const r = records[id]; if (!r) return;
+  editId = id;
+  document.getElementById('edit-sub').textContent = jpDate(r.date) + ' ' + (SYS[r.systemKey] ? SYS[r.systemKey].short : '') + '・' + r.kind + '（日付は変わりません）';
+  const isPest = r.kind === '農薬';
+  document.getElementById('edit-nums').hidden = isPest || r.kind === '日誌';
+  document.getElementById('edit-dose-box').hidden = !isPest;
+  document.getElementById('edit-ec').value = r.ec === undefined ? '' : r.ec;
+  document.getElementById('edit-added').value = r.addedMl === undefined ? '' : r.addedMl;
+  document.getElementById('edit-ph').value = r.ph === undefined ? '' : r.ph;
+  document.getElementById('edit-temp').value = r.temp === undefined ? '' : r.temp;
+  document.getElementById('edit-dose').value = r.dose === undefined ? '' : r.dose;
+  document.getElementById('edit-memo').value = r.memo || '';
+  openSheet('sheet-edit');
+}
+function saveEdit() {
+  const r = records[editId]; if (!r) return;
+  // まだ送っていない写真（中身は未送信の列にだけある）を引き継ぐ。引き継がないと写真が消える（再審査 N1）
+  const pr = pendingRecord(editId);
+  const n = Object.assign({}, r, { photos: (pr && pr.photos) || r.photos || [], memo: document.getElementById('edit-memo').value.trim(), updatedAt: nowIso() });
+  if (r.kind === '液肥' || r.kind === '水替え') {
+    const ec = num(document.getElementById('edit-ec').value);
+    if (ec !== '' && ec >= 3.5) { toast('3.5 以上は保存できません'); return; }
+    Object.assign(n, { ec, addedMl: num(document.getElementById('edit-added').value), ph: num(document.getElementById('edit-ph').value), temp: num(document.getElementById('edit-temp').value) });
+  }
+  if (r.kind === '農薬') n.dose = num(document.getElementById('edit-dose').value);
+  if (!putRecord(n)) { toast(SAVE_FAIL, 8000); return; }
+  closeSheets(); renderHistory(); flush(true);
+}
+function deleteRecord() {
+  const r = records[editId]; if (!r) return;
+  if (!confirm('この記録を消しますか？（ほかの端末とシートからも消えます）')) return;
+  if (!enqueue({ action: 'delete', id: editId, updatedAt: nowIso() })) { toast(SAVE_FAIL, 8000); return; }
+  records[editId] = Object.assign({}, r, { deleted: true });
+  store(K.records, records);
+  closeSheets(); renderHistory(); flush(true);
+}
+
+/* ---------- 予定 ---------- */
+function planStart(p) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(p.timing)) return p.timing;
+  return p.year + '-' + pad(p.month) + '-' + (p.timing === '中旬' ? '11' : p.timing === '下旬' ? '21' : '01');
+}
+function planEnd(p) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(p.timing)) return p.timing;
+  if (p.timing === '上旬') return p.year + '-' + pad(p.month) + '-10';
+  if (p.timing === '中旬') return p.year + '-' + pad(p.month) + '-20';
+  return p.year + '-' + pad(p.month) + '-' + pad(new Date(p.year, p.month, 0).getDate());
+}
+function planKey(p) { return p.systemKey || keyOf(p.system); }
+function planTitle(p) { const k = planKey(p); return (k ? SYS[k].short : '全体') + '：' + p.work + (p.details ? ' ' + p.details : ''); }
+function planWhen(p) { return /^\d{4}-\d{2}-\d{2}$/.test(p.timing) ? jpDate(p.timing) : p.month + '月 ' + p.timing + '（〜' + md(planEnd(p)) + '）'; }
+function planRow(p, mode) {
+  const late = !p.doneDate && planEnd(p) < today();
+  const col = planKey(p) ? SYS[planKey(p)].color : 'var(--all)';
+  const btns = mode === 'proposal'
+    ? `<button class="adopt" data-act="adopt" onclick="adoptPlan('${esc(p.id)}')">採用</button><button data-act="reject" onclick="rejectPlan('${esc(p.id)}')">やめる</button>`
+    : `<button data-act="edit" onclick="openPlan('${esc(p.id)}')">直す</button>`;
+  const chk = mode === 'proposal' ? `<i style="width:8px;height:40px;border-radius:4px;background:${col};flex:none"></i>` : `<button class="chk" data-act="done" aria-label="済にする" onclick="donePlan('${esc(p.id)}')">✓</button>`;
+  return `<div class="plan${p.doneDate ? ' done' : ''}${late ? ' late' : ''}" data-id="${esc(p.id)}">${chk}<div class="info"><div class="pt">${esc(planTitle(p))}</div><div class="pw">${esc(planWhen(p))}${late ? '（すぎています）' : ''}${p.doneDate ? '　済 ' + md(p.doneDate) : ''}</div></div><div class="btns">${btns}</div></div>`;
+}
+function livePlans() { return Object.values(plans).filter(p => p && !p.deleted); }
+function renderPlans() {
+  const t = today(), lim = today(13);
+  const props = livePlans().filter(p => p.status === '提案').sort((a, b) => planStart(a).localeCompare(planStart(b)));
+  document.getElementById('proposal-box').hidden = !props.length;
+  document.getElementById('proposal-list').innerHTML = props.map(p => planRow(p, 'proposal')).join('');
+  const near = livePlans().filter(p => p.status !== '提案' && planStart(p) <= lim && (!p.doneDate ? true : p.doneDate >= t)).sort((a, b) => planStart(a).localeCompare(planStart(b)));
+  document.getElementById('near-list').innerHTML = near.map(p => planRow(p)).join('');
+  document.getElementById('near-empty').hidden = near.length > 0;
+  const grid = document.getElementById('year-grid');
+  const d = new Date(); let y = d.getFullYear(), m = d.getMonth() + 1;
+  let html = '';
+  for (let i = 0; i < 12; i++) {
+    const ym = y + '-' + m;
+    const ps = livePlans().filter(p => p.status !== '提案' && +p.year === y && +p.month === m);
+    html += `<button class="mon${i === 0 ? ' now' : ''}" data-ym="${ym}" aria-pressed="${monthOpen === ym}" onclick="openMonth(${y},${m})"><b>${m}月</b>${y}年<div class="dots">${ps.map(p => `<i style="background:${planKey(p) ? SYS[planKey(p)].color : 'var(--all)'}"></i>`).join('')}</div></button>`;
+    m++; if (m > 12) { m = 1; y++; }
+  }
+  grid.innerHTML = html;
+  renderMonth();
+  renderToday();
+}
+function openMonth(y, m) { monthOpen = monthOpen === y + '-' + m ? null : y + '-' + m; renderPlans(); }
+function renderMonth() {
+  const box = document.getElementById('month-box');
+  if (!monthOpen) { box.hidden = true; return; }
+  const [y, m] = monthOpen.split('-').map(Number);
+  const ps = livePlans().filter(p => p.status !== '提案' && +p.year === y && +p.month === m).sort((a, b) => planStart(a).localeCompare(planStart(b)));
+  document.getElementById('month-title').textContent = y + '年' + m + '月の予定';
+  const ly = (y - 1) + '-' + pad(m);
+  const lastYear = liveRecords().filter(r => r.date.slice(0, 7) === ly);
+  const cnt = kd => lastYear.filter(r => r.kind === kd).length;
+  const lyNote = lastYear.length
+    ? `<p class="chartnote" id="last-year-note">去年の${m}月：記録 ${lastYear.length} 件（液肥 ${cnt('液肥')}・水替え ${cnt('水替え')}・農薬 ${cnt('農薬')}・日誌 ${cnt('日誌')}）。「見返し」で去年の${m}月を見られます</p>`
+    : `<p class="chartnote" id="last-year-note">去年の${m}月の記録はありません。</p>`;
+  document.getElementById('month-list').innerHTML = (ps.map(p => planRow(p)).join('') || '<p class="empty">この月の予定はまだありません。</p>') + lyNote;
+  box.hidden = false;
+}
+function fillMonths() {
+  const sel = document.getElementById('plan-month'); const d = new Date(); let y = d.getFullYear(), m = d.getMonth() + 1; let h = '';
+  for (let i = 0; i < 12; i++) { h += `<option value="${y}-${m}">${y}年${m}月</option>`; m++; if (m > 12) { m = 1; y++; } }
+  sel.innerHTML = h;
+}
+function openPlan(id) {
+  planEditId = id; fillMonths();
+  const p = id ? plans[id] : null;
+  document.getElementById('plan-title').textContent = p ? '予定を直す' : '予定を足す';
+  document.getElementById('btn-plan-delete').hidden = !p;
+  const ymSel = document.getElementById('plan-month');
+  if (p) {
+    const v = p.year + '-' + p.month;
+    if (![...ymSel.options].some(o => o.value === v)) ymSel.insertAdjacentHTML('afterbegin', `<option value="${v}">${p.year}年${p.month}月</option>`);
+    ymSel.value = v;
+    const isDate = /^\d{4}-\d{2}-\d{2}$/.test(p.timing);
+    document.getElementById('plan-timing').value = isDate ? 'date' : p.timing;
+    document.getElementById('plan-date').value = isDate ? p.timing : '';
+    document.getElementById('plan-date-box').hidden = !isDate;
+    document.getElementById('plan-system').value = planKey(p);
+    document.getElementById('plan-work').value = p.work;
+    document.getElementById('plan-details').value = p.details || '';
+  } else {
+    document.getElementById('plan-timing').value = '上旬'; document.getElementById('plan-date').value = ''; document.getElementById('plan-date-box').hidden = true;
+    document.getElementById('plan-system').value = ''; document.getElementById('plan-work').value = '追肥'; document.getElementById('plan-details').value = '';
+  }
+  openSheet('sheet-plan');
+}
+function savePlan() {
+  const [y, m] = document.getElementById('plan-month').value.split('-').map(Number);
+  let timing = document.getElementById('plan-timing').value;
+  if (timing === 'date') {
+    timing = document.getElementById('plan-date').value;
+    if (!timing) { toast('日付を選んでください'); return; }
+  }
+  const k = document.getElementById('plan-system').value;
+  const base = planEditId ? plans[planEditId] : {};
+  const p = Object.assign({}, base, {
+    id: planEditId || newId('plan'), year: /^\d{4}-/.test(timing) ? +timing.slice(0, 4) : y, month: /^\d{4}-/.test(timing) ? +timing.slice(5, 7) : m, timing,
+    systemKey: k, system: k ? SYS[k].name : '全体', work: document.getElementById('plan-work').value, details: document.getElementById('plan-details').value.trim(),
+    doneDate: base.doneDate || '', status: base.status || '予定', updatedAt: nowIso(), deleted: false
+  });
+  if (!putPlan(p)) return;
+  closeSheets(); renderPlans(); flush(true);
+}
+function putPlan(p) { const o = Object.assign({}, p); delete o.deleted; delete o.eventId; if (!enqueue({ action: 'save_plan', plan: o })) { toast(SAVE_FAIL, 8000); return false; } plans[p.id] = p; store(K.plans, plans); return true; }
+function donePlan(id) {
+  const p = plans[id]; if (!p) return;
+  putPlan(Object.assign({}, p, { doneDate: p.doneDate ? '' : today(), updatedAt: nowIso() }));
+  cache.today = (cache.today || []).filter(t => t.planId !== id); store(K.cache, cache);
+  renderPlans(); flush(true);
+}
+function adoptPlan(id) { const p = plans[id]; if (!p) return; putPlan(Object.assign({}, p, { status: '予定', updatedAt: nowIso() })); renderPlans(); flush(true); }
+function rejectPlan(id) { if (!plans[id]) return; if (!enqueue({ action: 'delete_plan', id })) { toast(SAVE_FAIL, 8000); return; } plans[id].deleted = true; store(K.plans, plans); renderPlans(); flush(true); }
+function deletePlan() {
+  if (!planEditId || !confirm('この予定を消しますか？（カレンダーからも消えます）')) return;
+  if (!enqueue({ action: 'delete_plan', id: planEditId })) { toast(SAVE_FAIL, 8000); return; }
+  plans[planEditId].deleted = true; store(K.plans, plans);
+  closeSheets(); renderPlans(); flush(true);
+}
+
+/* ---------- 農薬 ---------- */
+function renderPestForm() {
+  const sel = document.getElementById('pest-select'); const cur = sel.value;
+  sel.innerHTML = pests().map(p => `<option value="${esc(p.id)}">${esc(p.name)}（${esc(p.dilution)}倍）</option>`).join('');
+  if (cur && pests().some(p => p.id === cur)) sel.value = cur;
+  const ss = document.getElementById('pest-system'); const cs = ss.value || ui.sys;
+  ss.innerHTML = Object.keys(SYS).map(k => `<option value="${k}">${SYS[k].short}（${esc(sysCfg(k).crops)}）</option>`).join('');
+  ss.value = cs;
+}
+function pickL(l) {
+  if (l) { litre = l; document.getElementById('pest-water').value = ''; }
+  else { const v = num(document.getElementById('pest-water').value); litre = v === '' ? litre : v; }
+  document.querySelectorAll('#litre button').forEach(b => b.setAttribute('aria-pressed', l !== null && +b.dataset.l === litre));
+  pcalc();
+}
+function pestNow() { const id = document.getElementById('pest-select').value; return pests().find(p => p.id === id) || pests()[0]; }
+function sprayCount(k, name) {
+  const base = (cache.sprayCounts || {})[k + '|' + name] || 0;
+  const pend = queue.filter(q => q.action === 'upsert' && q.record.kind === '農薬' && q.record.systemKey === k && q.record.pestName === name).length;
+  return base + pend;
+}
+function pcalc() {
+  const p = pestNow(); if (!p) return;
+  const amt = Math.round(litre * 1000 / Number(p.dilution) * 10) / 10;
+  document.getElementById('pest-dose').textContent = amt.toFixed(1);
+  document.getElementById('pest-unit').textContent = p.unit || 'mL';
+  document.getElementById('pest-f').textContent = '水 ' + litre + ' L ÷ ' + p.dilution + '倍' + (num(p.preharvestDays) !== '' ? '　収穫の ' + p.preharvestDays + ' 日前まで' : '');
+  const k = document.getElementById('pest-system').value || ui.sys;
+  const used = sprayCount(k, p.name), max = num(p.maxUses);
+  const last = liveRecords().find(r => r.kind === '農薬' && r.systemKey === k && r.pestName === p.name);
+  const iv = num(p.intervalDays);
+  let ivNote = '';
+  if (last) {
+    const days = Math.round((new Date(today() + 'T00:00:00') - new Date(last.date + 'T00:00:00')) / 86400000);
+    ivNote = '前回 ' + md(last.date) + '（' + days + '日前）' + (iv !== '' && days < iv ? '。間隔は ' + iv + ' 日なので、' + md(today(iv - days)) + ' からが目安です' : '');
+  }
+  const u = document.getElementById('pest-uses'); const btn = document.getElementById('btn-pest-save');
+  if (max !== '') {
+    const over = used >= max;
+    u.className = 'uses' + (over ? ' over' : '');
+    u.textContent = (over ? `${SYS[k].short}では今作もう ${used} 回使いました（上限 ${max} 回）。このくすりは使えません` : `${SYS[k].short}では今作 ${used} 回使いました（上限 ${max} 回まで）`) + (ivNote ? '。' + ivNote : '');
+    btn.disabled = over;
+  } else {
+    u.className = 'uses'; u.textContent = `${SYS[k].short}では今作${used ? ' ' + used + ' 回使いました' : 'まだ使っていません'}。` + (ivNote ? ivNote + '。' : '') + '上限回数はスプレッドシートの「農薬一覧」タブで入れられます';
+    btn.disabled = false;
+  }
+}
+function savePest() {
+  const p = pestNow(); const k = document.getElementById('pest-system').value || ui.sys;
+  const dose = Math.round(litre * 1000 / Number(p.dilution) * 10) / 10;
+  if (!guard('btn-pest-save')) return;
+  const ok = putRecord({ id: newId('rec'), date: today(), time: nowTime(), systemKey: k, system: SYS[k].name, kind: '農薬', ec: '', ph: '', temp: '', targetEc: '', addedMl: '',
+    pestName: p.name, dilution: Number(p.dilution), waterL: litre, dose, unit: p.unit || 'mL', memo: document.getElementById('pest-memo').value.trim(), photos: [], updatedAt: nowIso(), deleted: false });
+  if (!ok) { toast(SAVE_FAIL, 8000); return; }
+  document.getElementById('pest-memo').value = '';
+  pcalc(); flush(true);
+}
+
+/* ---------- 下から出る板 ---------- */
+function openSheet(id) { document.getElementById('bg').style.display = 'block'; document.getElementById(id).classList.add('on'); }
+function closeSheets() { document.getElementById('bg').style.display = 'none'; document.querySelectorAll('.sheet').forEach(s => s.classList.remove('on')); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
+
+/* ---------- 設定 ---------- */
+function openSettings() { document.getElementById('set-url').value = rawStr(K.url); document.getElementById('set-token').value = token(); openSheet('sheet-settings'); }
+function saveSettings() {
+  const u = document.getElementById('set-url').value.trim(), t = document.getElementById('set-token').value.trim();
+  try { u ? localStorage.setItem(K.url, JSON.stringify(u)) : localStorage.removeItem(K.url); t ? localStorage.setItem(K.token, JSON.stringify(t)) : localStorage.removeItem(K.token); } catch (e) {}
+  closeSheets(); toast('設定を保存しました'); flush(false); pullAll(false);
+}
+function exportLocal() {
+  const out = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (/^hydro/.test(k)) out[k] = localStorage.getItem(k); } } catch (e) {}
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }));
+  a.download = 'hydrodaily_控え_' + today() + '.json'; document.body.appendChild(a); a.click(); a.remove();
+  toast('端末の記録を書き出しました');
+}
+
+/* ---------- はじめ ---------- */
+function renderAll() { renderSystems(); calc(); label(); renderToday(); renderPestForm(); pcalc(); renderSync(); if (document.getElementById('v-history').classList.contains('on')) renderHistory(); if (document.getElementById('v-plan').classList.contains('on')) renderPlans(); }
+(function start() {
+  document.getElementById('ver').textContent = 'v' + VERSION;
+  if (!SYS[ui.sys]) ui.sys = 'bato';
+  finishLegacy();
+  renderAll();
+  pickKind('液肥');
+  window.__hydroReady = true;
+  flush(false).then(() => pullAll(false));
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
 </body>
 </html>
