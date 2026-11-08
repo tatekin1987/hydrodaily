@@ -373,7 +373,60 @@ test('再審査 W-b：古い画面が見せていた「【防除】…」「【�
 
 test('ping は版を返す', () => {
   const g = createEnv();
-  assert.equal(g.get({ action: 'ping' }).version, '2.0.0');
+  assert.equal(g.get({ action: 'ping' }).version, '2.1.0');
+});
+
+test('ADR-020：AI が予定を直すと、カレンダーも動き、直す前の中身が「AIの変更記録」に残る。記録から書き戻せる', () => {
+  const g = createEnv();
+  g.run('setupHydro');
+  const cal = g.calendars[0];
+  g.post({ action: 'save_plan', plan: { id: 'p9', year: 2026, month: 12, timing: '上旬', system: 'tower', work: '追肥', details: 'はじめ', updatedAt: iso(0) } });
+  const ev = cal.events.find(e => /はじめ/.test(e.title));
+  const res = g.post({ action: 'ai_save_plan', plan: { id: 'p9', year: 2026, month: 12, timing: '下旬', system: 'tower', work: '追肥', details: 'ずらした', updatedAt: iso(5) } });
+  assert.equal(res.result, 'updated');
+  assert.match(ev.title, /ずらした/);
+  const log = g.table('AIの変更記録');
+  assert.equal(log.length, 1);
+  assert.equal(log[0]['種類'], '予定を直す');
+  assert.equal(log[0]['id'], 'p9');
+  assert.equal(JSON.parse(log[0]['前の中身']).details, 'はじめ');
+  assert.equal(JSON.parse(log[0]['後の中身']).timing, '下旬');
+  const got = g.get({ action: 'get_ai_log' }).log;
+  assert.equal(got[0].id, 'p9');
+  assert.equal(got[0].before.details, 'はじめ');
+  // 書き戻し
+  g.post({ action: 'ai_save_plan', plan: Object.assign({}, got[0].before, { updatedAt: iso(10) }) });
+  assert.equal(g.get({ action: 'get_plans' }).plans.find(p => p.id === 'p9').details, 'はじめ');
+});
+
+test('ADR-020：AI は無い予定を直せない・消した予定は戻せない・提案の状態は変えない', () => {
+  const g = createEnv();
+  assert.equal(g.post({ action: 'ai_save_plan', plan: { id: 'nai', year: 2026, month: 12, timing: '上旬', work: '追肥', updatedAt: iso() } }).status, 'error');
+  g.post({ action: 'save_plan', plan: { id: 'x', year: 2026, month: 12, timing: '上旬', work: '追肥', updatedAt: iso(0) } });
+  g.post({ action: 'delete_plan', id: 'x' });
+  assert.equal(g.post({ action: 'ai_save_plan', plan: { id: 'x', year: 2026, month: 12, timing: '中旬', work: '追肥', updatedAt: iso(5) } }).result, 'deleted');
+  g.post({ action: 'save_plan', plan: { id: 'y', year: 2026, month: 12, timing: '上旬', work: '追肥', status: '予定', updatedAt: iso(0) } });
+  g.post({ action: 'ai_save_plan', plan: { id: 'y', year: 2026, month: 12, timing: '中旬', work: '追肥', status: '提案', updatedAt: iso(5) } });
+  assert.equal(g.get({ action: 'get_plans' }).plans.find(p => p.id === 'y').status, '予定');
+});
+
+test('ADR-020：新しいくすりを農薬一覧に足せる。同じ名前があれば足さない。変更記録にも残る', () => {
+  const g = createEnv();
+  g.run('setupHydro');
+  const before = g.get({ action: 'get_settings' }).pesticides.length;
+  const res = g.post({ action: 'save_pest', pest: { name: 'テスト乳剤', dilution: 2000, unit: 'mL', intervalDays: 7, maxUses: 3, preharvestDays: 14, memo: 'ラベル確認済み' } });
+  assert.equal(res.result, 'saved');
+  const ps = g.get({ action: 'get_settings' }).pesticides;
+  assert.equal(ps.length, before + 1);
+  const p = ps.find(x => x.name === 'テスト乳剤');
+  assert.deepEqual([p.dilution, p.unit, p.intervalDays, p.maxUses, p.preharvestDays], [2000, 'mL', 7, 3, 14]);
+  assert.ok(p.id);
+  assert.equal(g.post({ action: 'save_pest', pest: { name: 'テスト乳剤', dilution: 100 } }).result, 'exists');
+  assert.equal(g.post({ action: 'save_pest', pest: { name: 'サンヨール', dilution: 100 } }).result, 'exists');
+  assert.equal(g.post({ action: 'save_pest', pest: { name: '', dilution: 100 } }).status, 'error');
+  assert.equal(g.post({ action: 'save_pest', pest: { name: '倍率なし' } }).status, 'error');
+  assert.equal(g.get({ action: 'get_settings' }).pesticides.find(x => x.name === 'テスト乳剤').dilution, 2000);
+  assert.equal(g.table('AIの変更記録').filter(r => r['種類'] === 'くすりを足す').length, 1);
 });
 
 test('関数名はすべて英数字（日本語の名前は Apps Script のエディタで「不明なエラー」になって動かない。2026-11-08 本番で発生）', () => {

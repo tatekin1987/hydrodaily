@@ -1,7 +1,7 @@
-// HydroDaily Service Worker v2.0.0
+// HydroDaily Service Worker v2.1.0
 // 同じ場所の画面（index.html など）は「まずネット、だめなら端末にしまった版」。電波がなくてもアプリが開く。
 // GAS（script.google.com）やフォントなど外への通信にはさわらない（送信の成否はアプリ側で見る）。
-const CACHE_NAME = 'hydrodaily-v2.0.0';
+const CACHE_NAME = 'hydrodaily-v2.1.0';
 const SHELL = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {

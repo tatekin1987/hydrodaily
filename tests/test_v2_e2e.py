@@ -336,6 +336,42 @@ class HydroDailyV2Test(unittest.TestCase):
         expect(self.page.locator("#year-grid .mon").first).to_contain_text("11月")
         self.assertGreaterEqual(self.page.locator("#year-grid .mon").first.locator("i").count(), 1)
 
+    def test_22_年を選ぶと前の年の予定と記録をふりかえれる(self):
+        def plan(i, y, m, w, done=""):
+            return {"id": i, "year": y, "month": m, "timing": "中旬", "system": "全体", "systemKey": "", "work": w, "details": "",
+                    "doneDate": done, "status": "予定", "updatedAt": "2026-11-01T00:00:00.000Z", "deleted": False}
+        self.gas.plans = {"p25": plan("p25", 2025, 7, "種まき", "2025-07-15"), "p26": plan("p26", 2026, 7, "収穫", "2026-07-12")}
+        self.gas.records = {"r1": {"id": "r1", "date": "2025-07-03", "time": "08:00", "kind": "液肥", "system": "タワー型", "systemKey": "tower",
+                                   "ec": 1.8, "memo": "", "photos": [], "updatedAt": "2026-11-01T00:00:00.000Z", "deleted": False}}
+        self.open({})
+        self.tab("v-plan")
+        sel = self.page.locator("#plan-year")
+        # 選べる年：これから1年・来年・今年・前の年（予定か記録がある年まで）
+        values = sel.locator("option").evaluate_all("os => os.map(o => o.value)")
+        self.assertEqual(values, ["next", "2027", "2026", "2025"])
+        self.assertEqual(sel.input_value(), "next")
+        # 2025年を選ぶと、1月〜12月が並ぶ
+        sel.select_option("2025")
+        grid = self.page.locator("#year-grid .mon")
+        expect(grid).to_have_count(12)
+        expect(grid.first).to_contain_text("1月")
+        expect(grid.nth(6)).to_contain_text("7月")
+        self.assertEqual(grid.nth(6).locator("i").count(), 1)
+        # 7月を押すと、その年の予定と、その月の記録の件数
+        grid.nth(6).click()
+        expect(self.page.locator("#month-title")).to_contain_text("2025年7月")
+        expect(self.page.locator("#month-list")).to_contain_text("種まき")
+        expect(self.page.locator("#month-list")).not_to_contain_text("収穫")
+        expect(self.page.locator("#month-record-note")).to_contain_text("記録 1 件")
+        # 2025年を見ているときに「予定を足す」と、2025年の月も選べる
+        self.page.click("#btn-plan-add")
+        months = self.page.locator("#plan-month option").evaluate_all("os => os.map(o => o.value)")
+        self.assertIn("2025-7", months)
+        self.page.click("#btn-plan-cancel") if self.page.locator("#btn-plan-cancel").count() else self.page.evaluate("closeSheets()")
+        # 「これから1年」に戻すと今月から
+        sel.select_option("next")
+        expect(grid.first).to_contain_text("11月")
+
     def test_10_AIの提案は採用で予定に移る(self):
         self.gas.plans = {"ai1": {"id": "ai1", "year": 2026, "month": 11, "timing": "下旬", "system": "BatoBucket", "systemKey": "bato", "work": "追肥",
                                   "details": "AIの案", "doneDate": "", "status": "提案", "updatedAt": "2026-11-08T00:00:00.000Z", "deleted": False}}

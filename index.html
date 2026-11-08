@@ -149,7 +149,7 @@ nav.tabs .badge{position:absolute;top:8px;right:calc(50% - 22px);min-width:18px;
 <body>
 <div class="app">
   <header>
-    <h1>HydroDaily</h1><span class="ver" id="ver">v2.0.0</span>
+    <h1>HydroDaily</h1><span class="ver" id="ver">v2.1.0</span>
     <button class="iconbtn" id="btn-settings" aria-label="設定" onclick="openSettings()">⚙️</button>
   </header>
   <div class="sync" id="sync-bar" data-testid="sync-bar">
@@ -225,7 +225,8 @@ nav.tabs .badge{position:absolute;top:8px;right:calc(50% - 22px);min-width:18px;
       <h2>今週・来週</h2>
       <div class="card"><div id="near-list"></div><p class="empty" id="near-empty" hidden>この2週間の予定はありません。</p></div>
       <button class="add" id="btn-plan-add" onclick="openPlan(null)">＋ 予定を足す</button>
-      <h2>この1年（月を押すと、その月の予定）</h2>
+      <h2 id="year-head">この1年（月を押すと、その月の予定）</h2>
+      <label class="f">見る年<select id="plan-year" onchange="pickYear(this.value)"></select></label>
       <div class="year" id="year-grid"></div>
       <div id="month-box" hidden><h2 id="month-title"></h2><div class="card"><div id="month-list"></div></div></div>
       <p class="chartnote">点の色＝系統。予定は専用カレンダー「家庭菜園」にも入ります（学校の予定とは別）。</p>
@@ -303,7 +304,7 @@ nav.tabs .badge{position:absolute;top:8px;right:calc(50% - 22px);min-width:18px;
 
 <script>
 'use strict';
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 const DEFAULT_GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzHnbRYd8D5auR8GmDNNQAR9PiCKyxhVpFelbXPW4bJl9A6MmnasbcEPNCMqE_XgT_c/exec';
 const SYS = {
   bato: { name: 'BatoBucket', short: 'BatoBucket', tank: 94, target: 2.0, crops: 'スティックセニョール', color: '#4E7D3A' },
@@ -332,7 +333,7 @@ let queue = load(K.queue, []);
 let plans = load(K.plans, {});
 let cache = load(K.cache, { settings: {}, pesticides: [], sprayCounts: {}, today: [] });
 let ui = load(K.ui, { sys: 'bato' });
-let kind = '液肥', litre = 2, photos = [], editId = null, planEditId = null, historyLimit = 50, monthOpen = null;
+let kind = '液肥', litre = 2, photos = [], editId = null, planEditId = null, historyLimit = 50, monthOpen = null, planYear = 'next';
 let fSys = 'all', fKind = 'all', sending = false, lastError = '';
 
 /* ---------- 日付（端末の日付） ---------- */
@@ -792,13 +793,16 @@ function renderPlans() {
   const near = livePlans().filter(p => p.status !== '提案' && planStart(p) <= lim && (!p.doneDate ? true : p.doneDate >= t)).sort((a, b) => planStart(a).localeCompare(planStart(b)));
   document.getElementById('near-list').innerHTML = near.map(p => planRow(p)).join('');
   document.getElementById('near-empty').hidden = near.length > 0;
+  fillYears();
   const grid = document.getElementById('year-grid');
-  const d = new Date(); let y = d.getFullYear(), m = d.getMonth() + 1;
+  const d = new Date(), nowYm = d.getFullYear() + '-' + (d.getMonth() + 1);
+  let [y, m] = planYear === 'next' ? [d.getFullYear(), d.getMonth() + 1] : [+planYear, 1];
+  document.getElementById('year-head').textContent = (planYear === 'next' ? 'この1年' : planYear + '年') + '（月を押すと、その月の予定）';
   let html = '';
   for (let i = 0; i < 12; i++) {
     const ym = y + '-' + m;
     const ps = livePlans().filter(p => p.status !== '提案' && +p.year === y && +p.month === m);
-    html += `<button class="mon${i === 0 ? ' now' : ''}" data-ym="${ym}" aria-pressed="${monthOpen === ym}" onclick="openMonth(${y},${m})"><b>${m}月</b>${y}年<div class="dots">${ps.map(p => `<i style="background:${planKey(p) ? SYS[planKey(p)].color : 'var(--all)'}"></i>`).join('')}</div></button>`;
+    html += `<button class="mon${ym === nowYm ? ' now' : ''}" data-ym="${ym}" aria-pressed="${monthOpen === ym}" onclick="openMonth(${y},${m})"><b>${m}月</b>${y}年<div class="dots">${ps.map(p => `<i style="background:${planKey(p) ? SYS[planKey(p)].color : 'var(--all)'}"></i>`).join('')}</div></button>`;
     m++; if (m > 12) { m = 1; y++; }
   }
   grid.innerHTML = html;
@@ -806,23 +810,41 @@ function renderPlans() {
   renderToday();
 }
 function openMonth(y, m) { monthOpen = monthOpen === y + '-' + m ? null : y + '-' + m; renderPlans(); }
+/* 見る年：これから1年／来年／今年／予定か記録がある前の年（2026-11-08 先生「去年の予定と見比べたい」） */
+function fillYears() {
+  const sel = document.getElementById('plan-year'), cy = new Date().getFullYear();
+  let min = cy;
+  livePlans().forEach(p => { if (+p.year && +p.year < min) min = +p.year; });
+  liveRecords().forEach(r => { const ry = +String(r.date || '').slice(0, 4); if (ry && ry < min) min = ry; });
+  let h = '<option value="next">これから1年</option>';
+  for (let yy = cy + 1; yy >= min; yy--) h += `<option value="${yy}">${yy}年</option>`;
+  if (sel.dataset.h !== h) { sel.innerHTML = h; sel.dataset.h = h; }
+  if (![...sel.options].some(o => o.value === planYear)) planYear = 'next';
+  sel.value = planYear;
+}
+function pickYear(v) { planYear = v; monthOpen = null; renderPlans(); }
 function renderMonth() {
   const box = document.getElementById('month-box');
   if (!monthOpen) { box.hidden = true; return; }
   const [y, m] = monthOpen.split('-').map(Number);
   const ps = livePlans().filter(p => p.status !== '提案' && +p.year === y && +p.month === m).sort((a, b) => planStart(a).localeCompare(planStart(b)));
   document.getElementById('month-title').textContent = y + '年' + m + '月の予定';
+  const here = liveRecords().filter(r => r.date.slice(0, 7) === y + '-' + pad(m));
+  const hc = kd => here.filter(r => r.kind === kd).length;
+  const hereNote = here.length
+    ? `<p class="chartnote" id="month-record-note">${y}年${m}月の記録 ${here.length} 件（液肥 ${hc('液肥')}・水替え ${hc('水替え')}・農薬 ${hc('農薬')}・日誌 ${hc('日誌')}）</p>`
+    : '';
   const ly = (y - 1) + '-' + pad(m);
   const lastYear = liveRecords().filter(r => r.date.slice(0, 7) === ly);
   const cnt = kd => lastYear.filter(r => r.kind === kd).length;
   const lyNote = lastYear.length
     ? `<p class="chartnote" id="last-year-note">去年の${m}月：記録 ${lastYear.length} 件（液肥 ${cnt('液肥')}・水替え ${cnt('水替え')}・農薬 ${cnt('農薬')}・日誌 ${cnt('日誌')}）。「見返し」で去年の${m}月を見られます</p>`
     : `<p class="chartnote" id="last-year-note">去年の${m}月の記録はありません。</p>`;
-  document.getElementById('month-list').innerHTML = (ps.map(p => planRow(p)).join('') || '<p class="empty">この月の予定はまだありません。</p>') + lyNote;
+  document.getElementById('month-list').innerHTML = (ps.map(p => planRow(p)).join('') || '<p class="empty">この月の予定はまだありません。</p>') + hereNote + lyNote;
   box.hidden = false;
 }
 function fillMonths() {
-  const sel = document.getElementById('plan-month'); const d = new Date(); let y = d.getFullYear(), m = d.getMonth() + 1; let h = '';
+  const sel = document.getElementById('plan-month'); const d = new Date(); let [y, m] = planYear === 'next' ? [d.getFullYear(), d.getMonth() + 1] : [+planYear, 1]; let h = '';
   for (let i = 0; i < 12; i++) { h += `<option value="${y}-${m}">${y}年${m}月</option>`; m++; if (m > 12) { m = 1; y++; } }
   sel.innerHTML = h;
 }

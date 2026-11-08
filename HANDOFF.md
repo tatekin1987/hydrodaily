@@ -1,12 +1,12 @@
 # HANDOFF.md - HydroDaily 引き継ぎ書（正本）
 
 - **最終更新**: 2026-11-08（🏠Claude）
-- **版**: v2.0.0（立て直し。画面・GAS とも作り直し）。**まだ公開していない・本番GASも貼りかえていない**
+- **版**: 画面・GAS v2.1.0（年の切りかえ・AIが予定を直す／くすりを足す）。GAS 2.1.0 は11-08 本番に貼りかえ済み（ping・予定の直しを確認）。v2.0.0 は2026-11-08 本番GASを貼りかえ・画面を公開済み（commit 7807b5e）。残りは公開の順番の 7〜10（先生）
 - **決めたこと**: DECISIONS.md の ADR-012〜017 と、その下の「v2 の辛口審査」。設計の全文は REBUILD_PLAN.md
 
 ## どこに何があるか
 - スマホ画面: `index.html`（下のタブ4つ：記録／見返し／予定／農薬）、`sw.js`（電波なしでも開く）、PCの10年日記 `dashboard.html`
-- GAS: `gas/Code.gs`（v2.0.0。本番に貼る前の新しい版）。本番の旧版の控え: `C:\Users\admin\AI設定の控え\20261108_hydrodaily_本番GAS\Code.gs`
+- GAS: `gas/Code.gs`（v2.1.0。本番に貼りかえ済み）。本番の旧版の控え: `C:\Users\admin\AI設定の控え\20261108_hydrodaily_本番GAS\Code.gs`
 - 公開: GitHub Pages `https://tatekin1987.github.io/hydrodaily/`（main に push すると公開）
 - シート: マイドライブ `HydroDaily_栽培ログ`。GAS の URL は index.html の DEFAULT_GAS_ENDPOINT
 - モック: `mock_v2.html`（合意済み）
@@ -28,8 +28,14 @@
 9. 合言葉（スクリプトのプロパティ WRITE_TOKEN）を決め、アプリの設定に入れる（必須）
 10. `testMorningMail` でメールが届くか見る
 
+## AI連携（段階7・2026-11-08）
+- スキル `C:\Users\admin\AI共通\skills\saien-soudan\`（自宅PCの Claude Code・Antigravity につないだ。学校PCは `setup_ai_link.ps1` を学校PCで1回動かす）
+- 道具 `scripts/saien.py`：`context`（読む）／`propose`（予定を提案で足す）／`edit`（予定を直す・済）／`pest`（くすりを足す）／`log`・`undo`（AIの変更記録・戻す）。試験 `tests/test_saien_tool.py`（12件）
+- edit・pest・log・undo は GAS v2.1.0（ai_save_plan・save_pest・get_ai_log・シート「AIの変更記録」）が要る。本番に貼りかえて「新バージョン」でデプロイ（URLは変えない）
+- 合言葉を決めたら各PCの `C:\Users\admin\.hydrodaily\token.txt` に入れる
+
 ## 次の一手
-- 上の公開（先生の作業＋Claude の push）
-- 段階7：AI連携スキル「菜園の相談」（記録を読んで相談に答え、予定を「提案」として書く。採用はアプリで）
+- 公開の順番の 8〜10（先生）
+- 学校PCで saien-soudan をつなぐ（学校PCの Claude か Antigravity が setup_ai_link.ps1 を動かす）
 - 段階6の残り：dashboard.html を v2 の「記録」に合わせる（今は get_timeline で読めている）
 - 数年後：端末の records が増え続けるので、古い記録を端末から外す処理

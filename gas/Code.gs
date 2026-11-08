@@ -20,7 +20,7 @@
  *   （試し）testMorningMail … 毎朝のメールを今すぐ1通送る
  */
 
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 const SS_NAME = 'HydroDaily_栽培ログ';
 const TZ = 'Asia/Tokyo';
 
@@ -29,6 +29,7 @@ const SHEET_PLANS = '予定';
 const SHEET_SETTINGS = '設定';
 const SHEET_PESTS = '農薬一覧';
 const SHEET_NOTIFIED = '通知済み';
+const SHEET_AILOG = 'AIの変更記録';
 const VIEW_BY_SYSTEM = '見る_系統別';
 const VIEW_MONTHLY = '見る_月まとめ';
 const VIEW_SPRAYS = '見る_農薬の履歴';
@@ -92,6 +93,7 @@ const DEFAULT_PESTS = [
   ['dyne', 'ダイン（展着剤）', 5000, 'mL', '', '', '', '展着剤：散布水1Lあたり0.2mL']
 ];
 const PEST_COLS = ['id', '名前', '倍率', '単位', '散布の間隔(日)', '今作の上限回数', '収穫前日数', 'メモ'];
+const AILOG_COLS = ['日時', '種類', 'id', '前の中身', '後の中身'];
 
 /* =========================================================
  * 入口
@@ -152,6 +154,8 @@ function handleOne_(op) {
     case 'save_log': return applyRecord_(normalizeRecord_(op, 'save_log'));
     case 'save_plan': return applyPlan_(normalizePlan_(op.plan || op));
     case 'delete_plan': return deletePlan_(op.id);
+    case 'ai_save_plan': return aiSavePlan_(op.plan || op);
+    case 'save_pest': return savePest_(op.pest || op);
     default: return { id: op && op.id, result: 'error', message: 'Invalid action: ' + (op && op.action) };
   }
 }
@@ -180,6 +184,7 @@ function handleGet_(p) {
   }
 
   if (action === 'get_summary') return { status: 'success', version: APP_VERSION, summary: buildSummary_() };
+  if (action === 'get_ai_log') return { status: 'success', version: APP_VERSION, log: readAiLog_(30) };
   if (action === 'get_plans') return { status: 'success', version: APP_VERSION, plans: readPlans_().filter(x => !x.deleted) };
   if (action === 'get_today') return { status: 'success', version: APP_VERSION, today: todayStr_(), items: computeReminders_(todayStr_()) };
   if (action === 'get_settings') return { status: 'success', version: APP_VERSION, settings: readSettings_(), pesticides: readPests_(), sprayCounts: sprayCounts_() };
@@ -298,6 +303,52 @@ function applyPlan_(plan) {
   })[c]);
   writeRow_(sh, found ? found.row : null, row, PLAN_COLS, PLAN_TEXT_COLS);
   return { id: plan.id, result: found ? 'updated' : 'saved' };
+}
+
+/* ---------- AI からの書き込み（ADR-020） ---------- */
+// AI が既存の予定を直す（日付・内容・済）。無い予定は作らない・消した予定は戻さない・状態（予定／提案）は変えない。直す前の中身を残す
+function aiSavePlan_(d) {
+  const plan = normalizePlan_(d || {});
+  const cur = readPlans_().filter(p => p.id === plan.id)[0];
+  if (!cur) return { id: plan.id, result: 'error', message: 'その予定はありません（AI は新しい予定を作るときは提案で入れる）' };
+  if (cur.deleted) return { id: plan.id, result: 'deleted' };
+  plan.status = cur.status;
+  const r = applyPlan_(plan);
+  if (r.result === 'updated') {
+    const before = Object.assign({}, cur); delete before.eventId; delete before.deleted;
+    const after = Object.assign({}, plan); delete after.eventId;
+    writeAiLog_('予定を直す', plan.id, before, after);
+  }
+  return r;
+}
+
+// AI が新しいくすりを農薬一覧に足す。同じ名前があれば足さない（上書きしない）
+function savePest_(d) {
+  const name = String((d && d.name) || '').trim();
+  const dilution = num_(d && d.dilution);
+  if (!name) return { id: '', result: 'error', message: 'くすりの名前がありません' };
+  if (dilution === '' || !(dilution > 0)) return { id: '', result: 'error', message: '倍率がありません' };
+  if (readPests_().some(p => p.name.trim() === name)) return { id: name, result: 'exists' };
+  const id = 'pest_' + Utilities.formatDate(new Date(), TZ, 'yyyyMMddHHmmss');
+  const pest = { id: id, name: name, dilution: dilution, unit: String(d.unit || 'mL'), intervalDays: num_(d.intervalDays),
+    maxUses: num_(d.maxUses), preharvestDays: num_(d.preharvestDays), memo: String(d.memo || '') };
+  writeRow_(sheet_(SHEET_PESTS), null, [pest.id, pest.name, pest.dilution, pest.unit, pest.intervalDays, pest.maxUses, pest.preharvestDays, pest.memo],
+    PEST_COLS, ['id', '名前', '単位', 'メモ']);
+  writeAiLog_('くすりを足す', id, null, pest);
+  return { id: id, result: 'saved' };
+}
+
+function writeAiLog_(kind, id, before, after) {
+  writeRow_(sheet_(SHEET_AILOG), null, [new Date().toISOString(), kind, String(id), before ? JSON.stringify(before) : '', after ? JSON.stringify(after) : ''], AILOG_COLS, AILOG_COLS);
+}
+
+function readAiLog_(limit) {
+  const sh = sheet_(SHEET_AILOG);
+  if (!sh || sh.getLastRow() < 2) return [];
+  const parse = v => { try { return v ? JSON.parse(String(v)) : null; } catch (e) { return null; } };
+  return sh.getRange(2, 1, sh.getLastRow() - 1, AILOG_COLS.length).getValues().filter(v => v[2])
+    .map(v => ({ time: isoOf_(v[0]), kind: String(v[1]), id: String(v[2]), before: parse(v[3]), after: parse(v[4]) }))
+    .reverse().slice(0, limit || 30);
 }
 
 function deletePlan_(id) {
@@ -806,6 +857,7 @@ function ensureSheets_() {
   const pe = makeSheet_(ss, SHEET_PESTS, PEST_COLS, ['id', '名前', '単位', 'メモ']);
   if (pe.getLastRow() < 2) pe.getRange(2, 1, DEFAULT_PESTS.length, PEST_COLS.length).setValues(DEFAULT_PESTS);
   makeSheet_(ss, SHEET_NOTIFIED, ['通知の印', '送った日時'], ['通知の印', '送った日時']);
+  makeSheet_(ss, SHEET_AILOG, AILOG_COLS, AILOG_COLS);
   ensured_ = true;
 }
 
